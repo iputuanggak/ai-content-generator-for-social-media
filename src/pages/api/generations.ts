@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { buildPrompts, type Platform, type Tone } from "@/lib/content-adapter";
 import { callOpenRouter } from "@/lib/openrouter-client";
 import { db } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, and, ilike, gte, lte, desc } from "drizzle-orm";
 import { member, brandSettings, generation, platformOutput } from "@/lib/db/schema";
 import { randomUUID } from "crypto";
 
@@ -14,6 +14,9 @@ export const config = {
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === "GET") {
+    return handleGet(req, res);
+  }
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -123,4 +126,66 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   res.write("data: [DONE]\n\n");
   res.end();
+}
+
+async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+  // Auth gate
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value) {
+      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
+    }
+  }
+
+  const session = await auth.api.getSession({ headers });
+  if (!session) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const activeOrgId = session.session.activeOrganizationId;
+  if (!activeOrgId) {
+    return res.status(400).json({ error: "No active organization" });
+  }
+
+  const { search, from, to, page: pageStr } = req.query as Record<string, string | undefined>;
+
+  const page = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
+  const pageSize = 20;
+  const offset = (page - 1) * pageSize;
+
+  // Build filters
+  const filters = [eq(generation.organizationId, activeOrgId)];
+
+  if (search && search.trim()) {
+    filters.push(ilike(generation.topic, `%${search.trim()}%`));
+  }
+
+  if (from) {
+    const fromDate = new Date(from);
+    if (isNaN(fromDate.getTime())) {
+      return res.status(400).json({ error: "Invalid from date" });
+    }
+    filters.push(gte(generation.createdAt, fromDate));
+  }
+
+  if (to) {
+    const toDate = new Date(to);
+    if (isNaN(toDate.getTime())) {
+      return res.status(400).json({ error: "Invalid to date" });
+    }
+    filters.push(lte(generation.createdAt, toDate));
+  }
+
+  const whereClause = filters.length > 1 ? and(...filters) : filters[0];
+
+  const allRows = await db
+    .select()
+    .from(generation)
+    .where(whereClause)
+    .orderBy(desc(generation.createdAt));
+
+  const total = allRows.length;
+  const items = allRows.slice(offset, offset + pageSize);
+
+  return res.status(200).json({ items, total, page, pageSize });
 }
