@@ -98,18 +98,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { systemPrompt, userPrompt } = buildPrompts(topic.trim(), tone, brandVoice, platform);
     const content = await callOpenRouter({ modelId, systemPrompt, userPrompt });
 
-    // Persist platform output
+    // Stream to client
+    const outputId = randomUUID();
     await db.insert(platformOutput).values({
-      id: randomUUID(),
+      id: outputId,
       generationId,
       platform,
       content,
       editedContent: null,
       updatedAt: new Date(),
     });
-
-    // Stream to client
-    const event = JSON.stringify({ platform, content, generationId });
+    const event = JSON.stringify({ platform, content, generationId, platformOutputId: outputId });
     res.write(`data: ${event}\n\n`);
 
     return { platform, content };
