@@ -11,9 +11,8 @@ Autonomous loop that implements GitHub Issues in dependency order, with optional
 
 **Prerequisites — verify before running:**
 1. `gh auth status` — must show an authenticated account
-2. If the project has a `.env.example`, all listed env vars must be exported in your shell
-3. Working tree is clean — `git status` shows nothing staged or unstaged
-4. You are on the branch you want to build from
+2. Working tree is clean — `git status` shows nothing staged or unstaged
+3. You are on the branch you want to build from
 
 **Then:**
 1. Load this skill
@@ -49,22 +48,6 @@ gh repo view --json nameWithOwner -q .nameWithOwner
 Store this as `<repo>`. Use it in all `gh` commands below instead of a hardcoded repo name.
 
 **Initialise iteration counter:** Set `<iterations> = 0`. The loop will halt if `<iterations>` exceeds `50`.
-
-**Pre-flight env check:**
-
-If `.env.example` exists, parse all non-comment, non-empty key names from it:
-```bash
-grep -E '^[A-Z_]+=?' .env.example | cut -d= -f1
-```
-For each key found, verify it is set in the current environment. If any key is missing, halt immediately:
-
-```
-Ralph halted: missing required environment variable(s): <KEY1>, <KEY2>
-Set them in your shell environment before re-running ralph.
-Note: agents cannot read .env.local — export the variables in your shell.
-```
-
-If `.env.example` does not exist, skip this check.
 
 Then read:
 - `CONTEXT.md` — domain glossary and architecture decisions
@@ -155,20 +138,19 @@ Instructions:
    the relevant area of the codebase.
 2. Implement everything described in "What to build".
 3. Every acceptance criterion must be met before you finish.
-4. Run `npm run build` — fix all errors before finishing.
-5. Unless the issue is purely `chore` or `docs` type, always load
+4. Unless the issue is purely `chore` or `docs` type, always load
    the `tdd` skill and use the red-green-refactor loop to write
    tests before implementation.
-6. If the build or tests fail and the root cause is not immediately
-   obvious, load the `diagnose` skill to work through the failure
-   systematically before attempting a fix.
-7. If you cannot make progress after 3 attempts on any single blocker,
+5. If tests fail and the root cause is not immediately obvious, load
+   the `diagnose` skill to work through the failure systematically
+   before attempting a fix.
+6. If you cannot make progress after 3 attempts on any single blocker,
    STOP immediately — do not keep retrying.
-8. Do NOT run any git commands (add, commit, push, worktree, branch).
+7. Do NOT run any git commands (add, commit, push, worktree, branch).
    The supervisor owns all git operations.
-9. Do NOT close the issue — the supervisor will do that.
-10. You MUST always return a structured result, even on failure.
-    Never return an empty response.
+8. Do NOT close the issue — the supervisor will do that.
+9. You MUST always return a structured result, even on failure.
+   Never return an empty response.
 
 Return EXACTLY this JSON structure (no extra text outside the JSON):
 {
@@ -220,20 +202,19 @@ Instructions:
    the relevant area of the codebase.
 2. Implement everything described in "What to build".
 3. Every acceptance criterion must be met before you finish.
-4. Run `npm run build` inside your working directory — fix all errors before finishing.
-5. Unless the issue is purely `chore` or `docs` type, always load
+4. Unless the issue is purely `chore` or `docs` type, always load
    the `tdd` skill and use the red-green-refactor loop to write
    tests before implementation.
-6. If the build or tests fail and the root cause is not immediately
-   obvious, load the `diagnose` skill to work through the failure
-   systematically before attempting a fix.
-7. If you cannot make progress after 3 attempts on any single blocker,
+5. If tests fail and the root cause is not immediately obvious, load
+   the `diagnose` skill to work through the failure systematically
+   before attempting a fix.
+6. If you cannot make progress after 3 attempts on any single blocker,
    STOP immediately — do not keep retrying.
-8. Do NOT run any git commands (add, commit, push, worktree, branch).
+7. Do NOT run any git commands (add, commit, push, worktree, branch).
    The supervisor owns all git operations.
-9. Do NOT close the issue — the supervisor will do that.
-10. You MUST always return a structured result, even on failure.
-    Never return an empty response.
+8. Do NOT close the issue — the supervisor will do that.
+9. You MUST always return a structured result, even on failure.
+   Never return an empty response.
 
 Return EXACTLY this JSON structure (no extra text outside the JSON):
 {
@@ -265,15 +246,7 @@ After the sub-agent returns:
   ```
   Stop here. Do not proceed.
 
-**4-b. Run build verification:**
-```bash
-npm run build
-```
-If the build fails:
-- Spawn one fix sub-agent (same prompt as Step 3, but replace the Instructions section with: "The implementation is already in place. Do NOT re-implement anything. Your only task is to fix the build errors shown below. Here is the build output: `<output>`").
-- If the build still fails after one fix attempt → **halt the loop** with the same halt message format above, noting build failure as the blocker.
-
-**4-b2. Run lint:**
+**4-b. Run lint:**
 ```bash
 npm run lint
 ```
@@ -310,12 +283,6 @@ If any sub-agent returned `status: stuck` or an invalid response:
   ```
   (repeat for each worktree)
 - Halt the loop with the halt message. Stop here.
-
-**4P-b. Run build verification inside each worktree:**
-```bash
-npm --prefix ../worktree-<N> run build
-```
-Same single-retry + halt policy. On halt, clean up all worktrees before stopping.
 
 ---
 
@@ -366,7 +333,7 @@ git branch -D issue-<N>
 
 ```bash
 gh issue close <N> --repo <repo> \
-  --comment "Implemented and verified. Build passes. Committed as: <commit message>"
+  --comment "Implemented and verified. Committed as: <commit message>"
 ```
 
 For parallel mode, close each issue after its branch is merged.
@@ -392,7 +359,7 @@ Otherwise run `git pull --ff-only`, then go back to Step 2.
 - **Never implement a blocked issue.** Always check blockers first.
 - **Supervisor owns git.** Sub-agents write code only. The supervisor runs all git commands: add, commit, push, worktree, branch, rebase.
 - **Sub-agents must never run git commands.** If a sub-agent's response mentions running git, ignore that and run it yourself.
-- **Halt on stuck.** If a sub-agent returns `status: stuck`, returns an empty/malformed response, or the build fails after one fix attempt → halt the loop and report to the user. Do not skip and continue.
+- **Halt on stuck.** If a sub-agent returns `status: stuck`, or returns an empty/malformed response → halt the loop and report to the user. Do not skip and continue.
 - **Halt message must include:** issue number, title, blocker description, and instructions for the user to resume (`fix the issue description` or `remove the ready-for-agent label`).
 - **Validate commit fields.** Always validate `commitType` and `commitScope` before building the commit message. Never use an unvalidated value from the sub-agent directly.
 - **Clean up worktrees on halt.** If ralph halts during parallel mode, remove all open worktrees and branches before stopping.
