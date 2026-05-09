@@ -1,40 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# AI Content Generator for Social Media
 
-## Getting Started
+A fullstack web application that allows marketing teams to generate platform-adapted social media content from a single prompt.
 
-First, run the development server:
+## Tech Stack
+
+- **Framework**: Next.js 16 (Pages Router), React 19, TypeScript
+- **Auth**: Better Auth with organization plugin
+- **Database**: Neon (serverless Postgres)
+- **ORM**: Drizzle ORM
+- **AI Provider**: OpenRouter (default model: `google/gemini-2.5-flash`)
+- **Deployment**: Vercel
+
+## Local Development Setup
+
+### Prerequisites
+
+- Node.js 18+
+- A [Neon](https://neon.tech) account (free tier works)
+- An [OpenRouter](https://openrouter.ai) API key
+
+### 1. Clone and install dependencies
+
+```bash
+git clone https://github.com/iputuanggak/ai-content-generator-for-social-media.git
+cd ai-content-generator-for-social-media
+npm install
+```
+
+### 2. Configure environment variables
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` and fill in:
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | Neon connection string (from Neon console → Connection Details) |
+| `BETTER_AUTH_SECRET` | Random secret — generate with `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | `http://localhost:3000` for local dev |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` for local dev |
+| `OPENROUTER_API_KEY` | From [openrouter.ai/keys](https://openrouter.ai/keys) |
+
+### 3. Run database migrations
+
+Push the schema to your Neon database:
+
+```bash
+npm run db:push
+```
+
+Or generate SQL migrations and apply them:
+
+```bash
+npm run db:generate
+npm run db:migrate
+```
+
+### 4. Start the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the app.
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+### 5. Verify the setup
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+- Visit `http://localhost:3000/api/hello` — should return `{"name":"John Doe"}`
+- Register a user via the Better Auth API: `POST /api/auth/sign-up/email`
+- Check `http://localhost:3000/api/session` after signing in to confirm session persistence
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+### Database Studio
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To inspect the database visually:
 
-## Learn More
+```bash
+npm run db:studio
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Vercel Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+Set all environment variables from `.env.example` in your Vercel project settings. The `DATABASE_URL` should point to your production Neon database.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
