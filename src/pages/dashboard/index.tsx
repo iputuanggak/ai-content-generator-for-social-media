@@ -15,6 +15,7 @@ interface PlatformOutputState {
   editedContent: string;
   savedContent: string;
   isSaving: boolean;
+  isRegenerating: boolean;
   copySuccess: boolean;
 }
 
@@ -132,16 +133,17 @@ export default function DashboardPage({
                 setCurrentGenerationId(parsed.generationId);
               }
               setOutputs((prev) => ({
-                ...prev,
-                [parsed.platform!]: {
-                  platformOutputId: parsed.platformOutputId!,
-                  content: parsed.content!,
-                  editedContent: parsed.content!,
-                  savedContent: parsed.content!,
-                  isSaving: false,
-                  copySuccess: false,
-                },
-              }));
+                    ...prev,
+                    [parsed.platform!]: {
+                      platformOutputId: parsed.platformOutputId!,
+                      content: parsed.content!,
+                      editedContent: parsed.content!,
+                      savedContent: parsed.content!,
+                      isSaving: false,
+                      isRegenerating: false,
+                      copySuccess: false,
+                    },
+                  }));
               setLoadingPlatforms((prev) => {
                 const next = new Set(prev);
                 next.delete(parsed.platform!);
@@ -227,11 +229,50 @@ export default function DashboardPage({
     }
   }
 
+  async function handleRegenerate(platform: string) {
+    const output = outputs[platform];
+    if (!output) return;
+
+    setOutputs((prev) => ({
+      ...prev,
+      [platform]: { ...prev[platform], isRegenerating: true },
+    }));
+
+    try {
+      const res = await fetch(
+        `/api/platform-outputs/${output.platformOutputId}/regenerate`,
+        { method: "POST" }
+      );
+
+      if (res.ok) {
+        const data = await res.json() as { id: string; content: string };
+        setOutputs((prev) => ({
+          ...prev,
+          [platform]: {
+            ...prev[platform],
+            content: data.content,
+            editedContent: data.content,
+            savedContent: data.content,
+            isRegenerating: false,
+          },
+        }));
+      } else {
+        setOutputs((prev) => ({
+          ...prev,
+          [platform]: { ...prev[platform], isRegenerating: false },
+        }));
+      }
+    } catch {
+      setOutputs((prev) => ({
+        ...prev,
+        [platform]: { ...prev[platform], isRegenerating: false },
+      }));
+    }
+  }
+
   async function handlePublishDateChange(value: string) {
     setIntendedPublishAt(value);
     if (!currentGenerationId || !value) return;
-
-    setIsSavingPublishDate(true);
     try {
       await fetch(`/api/generations/${currentGenerationId}`, {
         method: "PATCH",
@@ -409,6 +450,14 @@ export default function DashboardPage({
                           {output && !isLoading && (
                             <div className="flex items-center gap-2">
                               <button
+                                onClick={() => handleRegenerate(platform)}
+                                disabled={output.isRegenerating}
+                                className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                title="Regenerate content"
+                              >
+                                {output.isRegenerating ? "Regenerating…" : "Regenerate"}
+                              </button>
+                              <button
                                 onClick={() => handleCopy(platform)}
                                 className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
                                 title="Copy to clipboard"
@@ -426,7 +475,7 @@ export default function DashboardPage({
                           )}
                         </div>
 
-                        {isLoading ? (
+                        {isLoading || (output && output.isRegenerating) ? (
                           <div className="space-y-2">
                             <div className="h-3 w-full animate-pulse rounded bg-zinc-100" />
                             <div className="h-3 w-4/5 animate-pulse rounded bg-zinc-100" />

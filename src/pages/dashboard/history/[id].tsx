@@ -45,6 +45,7 @@ interface OutputState {
   editedContent: string;
   savedContent: string;
   isSaving: boolean;
+  isRegenerating: boolean;
   copySuccess: boolean;
 }
 
@@ -75,6 +76,7 @@ export default function HistoryDetailPage({
         editedContent: current,
         savedContent: current,
         isSaving: false,
+        isRegenerating: false,
         copySuccess: false,
       };
     }
@@ -142,6 +144,42 @@ export default function HistoryDetailPage({
       setOutputs((prev) => ({
         ...prev,
         [outputId]: { ...prev[outputId], isSaving: false },
+      }));
+    }
+  }
+
+  async function handleRegenerate(outputId: string) {
+    setOutputs((prev) => ({
+      ...prev,
+      [outputId]: { ...prev[outputId], isRegenerating: true },
+    }));
+
+    try {
+      const res = await fetch(`/api/platform-outputs/${outputId}/regenerate`, {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        const data = await res.json() as { id: string; content: string };
+        setOutputs((prev) => ({
+          ...prev,
+          [outputId]: {
+            ...prev[outputId],
+            editedContent: data.content,
+            savedContent: data.content,
+            isRegenerating: false,
+          },
+        }));
+      } else {
+        setOutputs((prev) => ({
+          ...prev,
+          [outputId]: { ...prev[outputId], isRegenerating: false },
+        }));
+      }
+    } catch {
+      setOutputs((prev) => ({
+        ...prev,
+        [outputId]: { ...prev[outputId], isRegenerating: false },
       }));
     }
   }
@@ -265,6 +303,14 @@ export default function HistoryDetailPage({
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => handleRegenerate(po.id)}
+                      disabled={state.isRegenerating}
+                      className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Regenerate content"
+                    >
+                      {state.isRegenerating ? "Regenerating…" : "Regenerate"}
+                    </button>
+                    <button
                       onClick={() => handleCopy(po.id)}
                       className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
                     >
@@ -279,12 +325,20 @@ export default function HistoryDetailPage({
                     </button>
                   </div>
                 </div>
+                {state.isRegenerating ? (
+                  <div className="space-y-2">
+                    <div className="h-3 w-full animate-pulse rounded bg-zinc-100" />
+                    <div className="h-3 w-4/5 animate-pulse rounded bg-zinc-100" />
+                    <div className="h-3 w-3/5 animate-pulse rounded bg-zinc-100" />
+                  </div>
+                ) : (
                 <textarea
                   value={state.editedContent}
                   onChange={(e) => handleEditContent(po.id, e.target.value)}
                   rows={6}
                   className="w-full resize-y rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5 text-sm leading-relaxed text-zinc-700 outline-none focus:border-zinc-300 focus:bg-white focus:ring-2 focus:ring-zinc-100"
                 />
+                )}
               </div>
             );
           })}
