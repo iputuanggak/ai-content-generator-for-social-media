@@ -22,8 +22,10 @@ interface PlatformOutputState {
 interface DashboardProps {
   userName: string;
   teamName: string | null;
+  teamId: string | null;
   defaultTone: Tone;
   activePlatforms: Platform[];
+  teams: { id: string; name: string }[];
 }
 
 const TONE_OPTIONS: { value: Tone; label: string }[] = [
@@ -47,8 +49,10 @@ const PLATFORM_LABELS: Record<Platform, string> = {
 export default function DashboardPage({
   userName,
   teamName,
+  teamId,
   defaultTone,
   activePlatforms,
+  teams,
 }: DashboardProps) {
   const router = useRouter();
   const [topic, setTopic] = useState("");
@@ -64,6 +68,12 @@ export default function DashboardPage({
   async function handleLogout() {
     await authClient.signOut();
     router.push("/login");
+  }
+
+  async function handleSwitchTeam(newTeamId: string) {
+    if (newTeamId === teamId) return;
+    await authClient.organization.setActive({ organizationId: newTeamId });
+    router.push("/dashboard");
   }
 
   async function handleGenerate(e: React.FormEvent) {
@@ -294,15 +304,36 @@ export default function DashboardPage({
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             <span className="text-lg font-semibold text-zinc-900">AI Content Generator</span>
-            {teamName && (
+            {teamName && teams.length > 1 ? (
+              <>
+                <span className="text-zinc-300">/</span>
+                <select
+                  value={teamId ?? ""}
+                  onChange={(e) => handleSwitchTeam(e.target.value)}
+                  className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-600 outline-none focus:border-zinc-400"
+                >
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : teamName ? (
               <>
                 <span className="text-zinc-300">/</span>
                 <span className="text-sm font-medium text-zinc-600">{teamName}</span>
               </>
-            )}
+            ) : null}
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-zinc-500">{userName}</span>
+            <Link
+              href="/dashboard/members"
+              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+            >
+              Members
+            </Link>
             <Link
               href="/dashboard/settings"
               className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
@@ -549,6 +580,10 @@ export const getServerSideProps: GetServerSideProps<DashboardProps> = async ({ r
     }
   }
 
+  // List all orgs for the team switcher
+  const allOrgs = await auth.api.listOrganizations({ headers });
+  const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
+
   // Read Brand Settings for default tone and active platforms
   let defaultTone: Tone = "professional";
   let activePlatforms: Platform[] = [
@@ -579,8 +614,10 @@ export const getServerSideProps: GetServerSideProps<DashboardProps> = async ({ r
     props: {
       userName: session.user.name,
       teamName,
+      teamId: activeOrgId ?? null,
       defaultTone,
       activePlatforms,
+      teams,
     },
   };
 };

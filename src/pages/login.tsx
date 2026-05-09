@@ -27,7 +27,13 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // If arriving from an invitation link, redirect back to accept it
+    const { invitationId } = router.query;
+    if (invitationId && typeof invitationId === "string") {
+      router.push(`/accept-invitation?invitationId=${invitationId}`);
+    } else {
+      router.push("/dashboard");
+    }
   }
 
   return (

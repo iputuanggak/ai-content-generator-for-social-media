@@ -29,7 +29,13 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push("/onboarding");
+    // If arriving from an invitation link, redirect back to accept it (skip onboarding)
+    const { invitationId } = router.query;
+    if (invitationId && typeof invitationId === "string") {
+      router.push(`/accept-invitation?invitationId=${invitationId}`);
+    } else {
+      router.push("/onboarding");
+    }
   }
 
   return (
