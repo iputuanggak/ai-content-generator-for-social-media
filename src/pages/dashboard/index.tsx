@@ -303,6 +303,12 @@ export default function DashboardPage({
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-zinc-500">{userName}</span>
+            <Link
+              href="/dashboard/settings"
+              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+            >
+              Settings
+            </Link>
             <button
               onClick={handleLogout}
               className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
