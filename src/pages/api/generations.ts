@@ -1,11 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { auth } from "@/lib/auth";
-import { buildPrompts, type Platform, type Tone } from "@/lib/content-adapter";
-import { callOpenRouter } from "@/lib/openrouter-client";
 import { db } from "@/lib/db";
 import { eq, and, ilike, gte, lte, desc } from "drizzle-orm";
-import { member, brandSettings, generation, platformOutput } from "@/lib/db/schema";
-import { randomUUID } from "crypto";
+import { member, generation } from "@/lib/db/schema";
+import type { Tone } from "@/lib/content-adapter";
+import { withSession } from "@/lib/with-session";
+import { generateContent } from "@/lib/generation-service";
 
 export const config = {
   api: {
@@ -17,27 +16,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === "GET") {
     return handleGet(req, res);
   }
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method === "POST") {
+    return handlePost(req, res);
   }
+  return res.status(405).json({ error: "Method not allowed" });
+}
 
-  // Auth gate
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
-    }
-  }
-
-  const session = await auth.api.getSession({ headers });
-  if (!session) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const activeOrgId = session.session.activeOrganizationId;
-  if (!activeOrgId) {
-    return res.status(400).json({ error: "No active organization" });
-  }
+async function handlePost(req: NextApiRequest, res: NextApiResponse) {
+  const ctx = await withSession(req, res);
+  if (!ctx) return;
 
   const { topic, tone } = req.body as { topic?: string; tone?: Tone };
 
@@ -48,33 +35,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: "tone is required" });
   }
 
-  // Find member record
+  // Verify the user is a member of the active org
   const memberRows = await db
     .select()
     .from(member)
-    .where(eq(member.organizationId, activeOrgId))
+    .where(eq(member.organizationId, ctx.activeOrgId))
     .limit(100);
 
-  const currentMember = memberRows.find((m) => m.userId === session.user.id);
+  const currentMember = memberRows.find((m) => m.userId === ctx.session.user.id);
   if (!currentMember) {
     return res.status(403).json({ error: "User is not a member of the active organization" });
   }
-
-  // Read Brand Settings
-  const settingsRows = await db
-    .select()
-    .from(brandSettings)
-    .where(eq(brandSettings.organizationId, activeOrgId))
-    .limit(1);
-
-  if (settingsRows.length === 0) {
-    return res.status(500).json({ error: "Brand settings not configured" });
-  }
-
-  const settings = settingsRows[0];
-  const activePlatforms = settings.activePlatforms as Platform[];
-  const modelId = settings.modelId;
-  const brandVoice = settings.brandVoice;
 
   // Set up Server-Sent Events
   res.setHeader("Content-Type", "text/event-stream");
@@ -82,46 +53,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  const generationId = randomUUID();
-  const now = new Date();
-
-  // Insert generation record first
-  await db.insert(generation).values({
-    id: generationId,
-    organizationId: activeOrgId,
-    memberId: currentMember.id,
-    topic: topic.trim(),
-    tone,
-    intendedPublishAt: null,
-    createdAt: now,
-  });
-
-  // Generate concurrently, send each output as it completes
-  const platformPromises = activePlatforms.map(async (platform) => {
-    const { systemPrompt, userPrompt } = buildPrompts(topic.trim(), tone, brandVoice, platform);
-    const content = await callOpenRouter({ modelId, systemPrompt, userPrompt });
-
-    // Stream to client
-    const outputId = randomUUID();
-    await db.insert(platformOutput).values({
-      id: outputId,
-      generationId,
-      platform,
-      content,
-      editedContent: null,
-      updatedAt: new Date(),
-    });
-    const event = JSON.stringify({ platform, content, generationId, platformOutputId: outputId });
-    res.write(`data: ${event}\n\n`);
-
-    return { platform, content };
-  });
-
   try {
-    await Promise.all(platformPromises);
+    await generateContent({
+      organizationId: ctx.activeOrgId,
+      memberId: currentMember.id,
+      topic: topic.trim(),
+      tone,
+      onPlatformOutput: ({ platform, content, platformOutputId, generationId }) => {
+        const event = JSON.stringify({ platform, content, generationId, platformOutputId });
+        res.write(`data: ${event}\n\n`);
+      },
+    });
   } catch (err) {
     console.error("Generation error:", err);
-    res.write(`data: ${JSON.stringify({ error: "Generation failed for one or more platforms" })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({ error: "Generation failed for one or more platforms" })}\n\n`
+    );
   }
 
   res.write("data: [DONE]\n\n");
@@ -129,23 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  // Auth gate
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
-    }
-  }
-
-  const session = await auth.api.getSession({ headers });
-  if (!session) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const activeOrgId = session.session.activeOrganizationId;
-  if (!activeOrgId) {
-    return res.status(400).json({ error: "No active organization" });
-  }
+  const ctx = await withSession(req, res);
+  if (!ctx) return;
 
   const { search, from, to, page: pageStr } = req.query as Record<string, string | undefined>;
 
@@ -153,8 +85,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const pageSize = 20;
   const offset = (page - 1) * pageSize;
 
-  // Build filters
-  const filters = [eq(generation.organizationId, activeOrgId)];
+  const filters = [eq(generation.organizationId, ctx.activeOrgId)];
 
   if (search && search.trim()) {
     filters.push(ilike(generation.topic, `%${search.trim()}%`));

@@ -83,8 +83,8 @@ describe("Generation Service – generateContent", () => {
       deps
     );
 
-    // 2 inserts: generation + platformOutput
-    expect(dbClient._insertedRows).toHaveLength(2);
+    // 3 inserts: 1 generation + 2 platform outputs (one per platform, inserted individually)
+    expect(dbClient._insertedRows).toHaveLength(3);
   });
 
   it("throws when brand settings are not found", async () => {
@@ -100,6 +100,31 @@ describe("Generation Service – generateContent", () => {
         deps
       )
     ).rejects.toThrow("Brand settings not found");
+  });
+
+  it("calls onPlatformOutput for each platform as it completes", async () => {
+    const dbClient = makeDbClient([defaultBrandSettings]);
+    const notified: string[] = [];
+    const deps: GenerationServiceDeps = {
+      dbClient,
+      openRouterFetch: makeFetch("post"),
+    };
+
+    await generateContent(
+      {
+        organizationId: "org-1",
+        memberId: "member-1",
+        topic: "AI news",
+        tone: "professional",
+        onPlatformOutput: ({ platform }) => {
+          notified.push(platform);
+        },
+      },
+      deps
+    );
+
+    expect(notified).toHaveLength(2);
+    expect(notified.sort()).toEqual(["linkedin", "twitter"]);
   });
 
   it("uses the brand voice from brand settings in prompt (smoke test via fetch body)", async () => {

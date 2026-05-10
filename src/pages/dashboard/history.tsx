@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { auth } from "@/lib/auth";
 import type { GetServerSideProps } from "next";
 import { authClient } from "@/lib/auth-client";
+import { requireAuthPage } from "@/lib/require-auth-page";
 
 interface Generation {
   id: string;
@@ -271,36 +272,29 @@ export default function HistoryPage({ userName, teamName }: HistoryPageProps) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps<HistoryPageProps> = async ({ req }) => {
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
+export const getServerSideProps: GetServerSideProps<HistoryPageProps> = requireAuthPage(
+  async ({ authHeaders, session }) => {
+    let teamName: string | null = null;
+    const activeOrgId = session.session.activeOrganizationId;
+
+    if (activeOrgId) {
+      const org = await auth.api.getFullOrganization({
+        headers: authHeaders,
+        query: { organizationId: activeOrgId },
+      });
+      if (org?.name) teamName = org.name;
     }
+
+    if (!teamName) {
+      const orgs = await auth.api.listOrganizations({ headers: authHeaders });
+      if (orgs?.length) teamName = orgs[0].name;
+    }
+
+    return {
+      props: {
+        userName: session.user.name,
+        teamName,
+      },
+    };
   }
-
-  const session = await auth.api.getSession({ headers });
-  if (!session) {
-    return { redirect: { destination: "/login", permanent: false } };
-  }
-
-  let teamName: string | null = null;
-  const activeOrgId = session.session.activeOrganizationId;
-
-  if (activeOrgId) {
-    const org = await auth.api.getFullOrganization({ headers, query: { organizationId: activeOrgId } });
-    if (org?.name) teamName = org.name;
-  }
-
-  if (!teamName) {
-    const orgs = await auth.api.listOrganizations({ headers });
-    if (orgs?.length) teamName = orgs[0].name;
-  }
-
-  return {
-    props: {
-      userName: session.user.name,
-      teamName,
-    },
-  };
-};
+);

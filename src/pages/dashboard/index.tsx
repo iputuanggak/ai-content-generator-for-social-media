@@ -8,6 +8,8 @@ import { brandSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import type { GetServerSideProps } from "next";
 import type { Tone, Platform } from "@/lib/content-adapter";
+import { PLATFORM_LABELS } from "@/lib/platform-metadata";
+import { requireAuthPage } from "@/lib/require-auth-page";
 
 interface PlatformOutputState {
   platformOutputId: string;
@@ -34,17 +36,6 @@ const TONE_OPTIONS: { value: Tone; label: string }[] = [
   { value: "humorous", label: "Humorous" },
   { value: "inspirational", label: "Inspirational" },
 ];
-
-const PLATFORM_LABELS: Record<Platform, string> = {
-  twitter: "Twitter / X",
-  linkedin: "LinkedIn",
-  instagram: "Instagram",
-  facebook: "Facebook",
-  tiktok: "TikTok",
-  youtube: "YouTube",
-  threads: "Threads",
-  pinterest: "Pinterest",
-};
 
 export default function DashboardPage({
   userName,
@@ -539,85 +530,74 @@ export default function DashboardPage({
   );
 }
 
-export const getServerSideProps: GetServerSideProps<DashboardProps> = async ({ req }) => {
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
-    }
-  }
+export const getServerSideProps: GetServerSideProps<DashboardProps> = requireAuthPage(
+  async ({ authHeaders, session }) => {
+    // Fetch the active organization name if there is one
+    let teamName: string | null = null;
+    let activeOrgId = session.session.activeOrganizationId;
 
-  const session = await auth.api.getSession({ headers });
-
-  if (!session) {
-    return { redirect: { destination: "/login", permanent: false } };
-  }
-
-  // Fetch the active organization name if there is one
-  let teamName: string | null = null;
-  let activeOrgId = session.session.activeOrganizationId;
-
-  if (activeOrgId) {
-    const orgsResponse = await auth.api.getFullOrganization({
-      headers,
-      query: { organizationId: activeOrgId },
-    });
-    if (orgsResponse && orgsResponse.name) {
-      teamName = orgsResponse.name;
-    }
-  }
-
-  // If no active org, try to get first org the user belongs to
-  if (!teamName) {
-    const listResponse = await auth.api.listOrganizations({ headers });
-    if (listResponse && listResponse.length > 0) {
-      teamName = listResponse[0].name;
-      activeOrgId = listResponse[0].id;
-      await auth.api.setActiveOrganization({
-        headers,
-        body: { organizationId: listResponse[0].id },
+    if (activeOrgId) {
+      const orgsResponse = await auth.api.getFullOrganization({
+        headers: authHeaders,
+        query: { organizationId: activeOrgId },
       });
+      if (orgsResponse && orgsResponse.name) {
+        teamName = orgsResponse.name;
+      }
     }
-  }
 
-  // List all orgs for the team switcher
-  const allOrgs = await auth.api.listOrganizations({ headers });
-  const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
-
-  // Read Brand Settings for default tone and active platforms
-  let defaultTone: Tone = "professional";
-  let activePlatforms: Platform[] = [
-    "twitter",
-    "linkedin",
-    "instagram",
-    "facebook",
-    "tiktok",
-    "youtube",
-    "threads",
-    "pinterest",
-  ];
-
-  if (activeOrgId) {
-    const settingsRows = await db
-      .select()
-      .from(brandSettings)
-      .where(eq(brandSettings.organizationId, activeOrgId))
-      .limit(1);
-
-    if (settingsRows.length > 0) {
-      defaultTone = settingsRows[0].defaultTone as Tone;
-      activePlatforms = settingsRows[0].activePlatforms as Platform[];
+    // If no active org, try to get first org the user belongs to
+    if (!teamName) {
+      const listResponse = await auth.api.listOrganizations({ headers: authHeaders });
+      if (listResponse && listResponse.length > 0) {
+        teamName = listResponse[0].name;
+        activeOrgId = listResponse[0].id;
+        await auth.api.setActiveOrganization({
+          headers: authHeaders,
+          body: { organizationId: listResponse[0].id },
+        });
+      }
     }
-  }
 
-  return {
-    props: {
-      userName: session.user.name,
-      teamName,
-      teamId: activeOrgId ?? null,
-      defaultTone,
-      activePlatforms,
-      teams,
-    },
-  };
-};
+    // List all orgs for the team switcher
+    const allOrgs = await auth.api.listOrganizations({ headers: authHeaders });
+    const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
+
+    // Read Brand Settings for default tone and active platforms
+    let defaultTone: Tone = "professional";
+    let activePlatforms: Platform[] = [
+      "twitter",
+      "linkedin",
+      "instagram",
+      "facebook",
+      "tiktok",
+      "youtube",
+      "threads",
+      "pinterest",
+    ];
+
+    if (activeOrgId) {
+      const settingsRows = await db
+        .select()
+        .from(brandSettings)
+        .where(eq(brandSettings.organizationId, activeOrgId))
+        .limit(1);
+
+      if (settingsRows.length > 0) {
+        defaultTone = settingsRows[0].defaultTone as Tone;
+        activePlatforms = settingsRows[0].activePlatforms as Platform[];
+      }
+    }
+
+    return {
+      props: {
+        userName: session.user.name,
+        teamName,
+        teamId: activeOrgId ?? null,
+        defaultTone,
+        activePlatforms,
+        teams,
+      },
+    };
+  }
+);

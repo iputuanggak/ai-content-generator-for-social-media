@@ -7,6 +7,8 @@ import { eq } from "drizzle-orm";
 import { generation, platformOutput } from "@/lib/db/schema";
 import type { GetServerSideProps } from "next";
 import { authClient } from "@/lib/auth-client";
+import { PLATFORM_LABELS } from "@/lib/platform-metadata";
+import { requireAuthPage } from "@/lib/require-auth-page";
 
 interface PlatformOutputData {
   id: string;
@@ -29,17 +31,6 @@ interface HistoryDetailPageProps {
   generation: GenerationData;
   platformOutputs: PlatformOutputData[];
 }
-
-const PLATFORM_LABELS: Record<string, string> = {
-  twitter: "Twitter / X",
-  linkedin: "LinkedIn",
-  instagram: "Instagram",
-  facebook: "Facebook",
-  tiktok: "TikTok",
-  youtube: "YouTube",
-  threads: "Threads",
-  pinterest: "Pinterest",
-};
 
 interface OutputState {
   editedContent: string;
@@ -348,60 +339,56 @@ export default function HistoryDetailPage({
   );
 }
 
-export const getServerSideProps: GetServerSideProps<HistoryDetailPageProps> = async ({ req, params }) => {
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
+export const getServerSideProps: GetServerSideProps<HistoryDetailPageProps> = requireAuthPage(
+  async ({ authHeaders, session, params }) => {
+    const id = params?.id;
+    if (!id || typeof id !== "string") {
+      return { notFound: true };
     }
-  }
 
-  const session = await auth.api.getSession({ headers });
-  if (!session) {
-    return { redirect: { destination: "/login", permanent: false } };
-  }
+    const activeOrgId = session.session.activeOrganizationId;
+    if (!activeOrgId) {
+      return { redirect: { destination: "/dashboard", permanent: false } };
+    }
 
-  const id = params?.id;
-  if (!id || typeof id !== "string") {
-    return { notFound: true };
-  }
+    // Fetch generation
+    const genRows = await db.select().from(generation).where(eq(generation.id, id)).limit(1);
+    if (genRows.length === 0 || genRows[0].organizationId !== activeOrgId) {
+      return { notFound: true };
+    }
 
-  const activeOrgId = session.session.activeOrganizationId;
-  if (!activeOrgId) {
-    return { redirect: { destination: "/dashboard", permanent: false } };
-  }
+    const gen = genRows[0];
+    const outputs = await db
+      .select()
+      .from(platformOutput)
+      .where(eq(platformOutput.generationId, id));
 
-  // Fetch generation
-  const genRows = await db.select().from(generation).where(eq(generation.id, id)).limit(1);
-  if (genRows.length === 0 || genRows[0].organizationId !== activeOrgId) {
-    return { notFound: true };
-  }
+    // Get team name
+    let teamName: string | null = null;
+    const org = await auth.api.getFullOrganization({
+      headers: authHeaders,
+      query: { organizationId: activeOrgId },
+    });
+    if (org?.name) teamName = org.name;
 
-  const gen = genRows[0];
-  const outputs = await db.select().from(platformOutput).where(eq(platformOutput.generationId, id));
-
-  // Get team name
-  let teamName: string | null = null;
-  const org = await auth.api.getFullOrganization({ headers, query: { organizationId: activeOrgId } });
-  if (org?.name) teamName = org.name;
-
-  return {
-    props: {
-      userName: session.user.name,
-      teamName,
-      generation: {
-        id: gen.id,
-        topic: gen.topic,
-        tone: gen.tone,
-        intendedPublishAt: gen.intendedPublishAt?.toISOString() ?? null,
-        createdAt: gen.createdAt.toISOString(),
+    return {
+      props: {
+        userName: session.user.name,
+        teamName,
+        generation: {
+          id: gen.id,
+          topic: gen.topic,
+          tone: gen.tone,
+          intendedPublishAt: gen.intendedPublishAt?.toISOString() ?? null,
+          createdAt: gen.createdAt.toISOString(),
+        },
+        platformOutputs: outputs.map((po) => ({
+          id: po.id,
+          platform: po.platform,
+          content: po.content,
+          editedContent: po.editedContent ?? null,
+        })),
       },
-      platformOutputs: outputs.map((po) => ({
-        id: po.id,
-        platform: po.platform,
-        content: po.content,
-        editedContent: po.editedContent ?? null,
-      })),
-    },
-  };
-};
+    };
+  }
+);

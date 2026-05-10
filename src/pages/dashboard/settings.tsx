@@ -7,6 +7,8 @@ import { brandSettings, member } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { GetServerSideProps } from "next";
 import type { Tone, Platform } from "@/lib/content-adapter";
+import { PLATFORM_OPTIONS } from "@/lib/platform-metadata";
+import { requireAuthPage } from "@/lib/require-auth-page";
 
 const TONE_OPTIONS: { value: Tone; label: string }[] = [
   { value: "professional", label: "Professional" },
@@ -15,16 +17,6 @@ const TONE_OPTIONS: { value: Tone; label: string }[] = [
   { value: "inspirational", label: "Inspirational" },
 ];
 
-const PLATFORM_OPTIONS: { value: Platform; label: string }[] = [
-  { value: "twitter", label: "Twitter / X" },
-  { value: "linkedin", label: "LinkedIn" },
-  { value: "instagram", label: "Instagram" },
-  { value: "facebook", label: "Facebook" },
-  { value: "tiktok", label: "TikTok" },
-  { value: "youtube", label: "YouTube" },
-  { value: "threads", label: "Threads" },
-  { value: "pinterest", label: "Pinterest" },
-];
 
 interface SettingsPageProps {
   userName: string;
@@ -258,81 +250,71 @@ export default function SettingsPage({
   );
 }
 
-export const getServerSideProps: GetServerSideProps<SettingsPageProps> = async ({ req }) => {
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
+export const getServerSideProps: GetServerSideProps<SettingsPageProps> = requireAuthPage(
+  async ({ authHeaders, session }) => {
+    let activeOrgId = session.session.activeOrganizationId;
+
+    // Fall back to first org if no active org
+    if (!activeOrgId) {
+      const listResponse = await auth.api.listOrganizations({ headers: authHeaders });
+      if (listResponse && listResponse.length > 0) {
+        activeOrgId = listResponse[0].id;
+        await auth.api.setActiveOrganization({
+          headers: authHeaders,
+          body: { organizationId: listResponse[0].id },
+        });
+      }
     }
-  }
 
-  const session = await auth.api.getSession({ headers });
-  if (!session) {
-    return { redirect: { destination: "/login", permanent: false } };
-  }
-
-  let activeOrgId = session.session.activeOrganizationId;
-
-  // Fall back to first org if no active org
-  if (!activeOrgId) {
-    const listResponse = await auth.api.listOrganizations({ headers });
-    if (listResponse && listResponse.length > 0) {
-      activeOrgId = listResponse[0].id;
-      await auth.api.setActiveOrganization({
-        headers,
-        body: { organizationId: listResponse[0].id },
-      });
+    if (!activeOrgId) {
+      return { redirect: { destination: "/onboarding", permanent: false } };
     }
+
+    // Get org info
+    const orgResponse = await auth.api.getFullOrganization({
+      headers: authHeaders,
+      query: { organizationId: activeOrgId },
+    });
+
+    if (!orgResponse) {
+      return { redirect: { destination: "/onboarding", permanent: false } };
+    }
+
+    // Check member role
+    const memberRows = await db
+      .select()
+      .from(member)
+      .where(and(eq(member.organizationId, activeOrgId), eq(member.userId, session.user.id)))
+      .limit(1);
+
+    const isAdmin =
+      memberRows.length > 0 &&
+      (memberRows[0].role === "owner" || memberRows[0].role === "admin");
+
+    // Read brand settings
+    const settingsRows = await db
+      .select()
+      .from(brandSettings)
+      .where(eq(brandSettings.organizationId, activeOrgId))
+      .limit(1);
+
+    if (settingsRows.length === 0) {
+      return { redirect: { destination: "/dashboard", permanent: false } };
+    }
+
+    const settings = settingsRows[0];
+
+    return {
+      props: {
+        userName: session.user.name,
+        teamName: orgResponse.name,
+        teamId: activeOrgId,
+        isAdmin,
+        brandVoice: settings.brandVoice,
+        defaultTone: settings.defaultTone as Tone,
+        activePlatforms: settings.activePlatforms as Platform[],
+        modelId: settings.modelId,
+      },
+    };
   }
-
-  if (!activeOrgId) {
-    return { redirect: { destination: "/onboarding", permanent: false } };
-  }
-
-  // Get org info
-  const orgResponse = await auth.api.getFullOrganization({
-    headers,
-    query: { organizationId: activeOrgId },
-  });
-
-  if (!orgResponse) {
-    return { redirect: { destination: "/onboarding", permanent: false } };
-  }
-
-  // Check member role
-  const memberRows = await db
-    .select()
-    .from(member)
-    .where(and(eq(member.organizationId, activeOrgId), eq(member.userId, session.user.id)))
-    .limit(1);
-
-  const isAdmin =
-    memberRows.length > 0 &&
-    (memberRows[0].role === "owner" || memberRows[0].role === "admin");
-
-  // Read brand settings
-  const settingsRows = await db
-    .select()
-    .from(brandSettings)
-    .where(eq(brandSettings.organizationId, activeOrgId))
-    .limit(1);
-
-  if (settingsRows.length === 0) {
-    return { redirect: { destination: "/dashboard", permanent: false } };
-  }
-
-  const settings = settingsRows[0];
-
-  return {
-    props: {
-      userName: session.user.name,
-      teamName: orgResponse.name,
-      teamId: activeOrgId,
-      isAdmin,
-      brandVoice: settings.brandVoice,
-      defaultTone: settings.defaultTone as Tone,
-      activePlatforms: settings.activePlatforms as Platform[],
-      modelId: settings.modelId,
-    },
-  };
-};
+);

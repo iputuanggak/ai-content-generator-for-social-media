@@ -3,16 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import { member } from "@/lib/db/schema";
-
-function getHeaders(req: NextApiRequest): Headers {
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
-    }
-  }
-  return headers;
-}
+import { buildReqHeaders } from "@/lib/with-session";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "DELETE") return handleDelete(req, res);
@@ -20,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleDelete(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth.api.getSession({ headers: getHeaders(req) });
+  const session = await auth.api.getSession({ headers: buildReqHeaders(req) });
   if (!session) return res.status(401).json({ error: "Unauthorized" });
 
   const teamId = req.query.id as string;

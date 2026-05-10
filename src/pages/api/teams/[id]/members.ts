@@ -3,16 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import { member, user } from "@/lib/db/schema";
-
-function getHeaders(req: NextApiRequest): Headers {
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
-    }
-  }
-  return headers;
-}
+import { buildReqHeaders } from "@/lib/with-session";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "GET") return handleGet(req, res);
@@ -21,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth.api.getSession({ headers: getHeaders(req) });
+  const session = await auth.api.getSession({ headers: buildReqHeaders(req) });
   if (!session) return res.status(401).json({ error: "Unauthorized" });
 
   const teamId = req.query.id as string;
@@ -57,7 +48,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth.api.getSession({ headers: getHeaders(req) });
+  const session = await auth.api.getSession({ headers: buildReqHeaders(req) });
   if (!session) return res.status(401).json({ error: "Unauthorized" });
 
   const teamId = req.query.id as string;
@@ -84,7 +75,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   // Use Better Auth organization plugin to create an invitation
   try {
     const result = await auth.api.createInvitation({
-      headers: getHeaders(req),
+      headers: buildReqHeaders(req),
       body: {
         email,
         role: "member",

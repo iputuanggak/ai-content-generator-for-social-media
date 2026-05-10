@@ -7,6 +7,7 @@ import { member, user } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authClient } from "@/lib/auth-client";
 import type { GetServerSideProps } from "next";
+import { requireAuthPage } from "@/lib/require-auth-page";
 
 interface MemberData {
   id: string;
@@ -279,89 +280,79 @@ export default function MembersPage({
   );
 }
 
-export const getServerSideProps: GetServerSideProps<MembersPageProps> = async ({ req }) => {
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
+export const getServerSideProps: GetServerSideProps<MembersPageProps> = requireAuthPage(
+  async ({ authHeaders, session }) => {
+    let activeOrgId = session.session.activeOrganizationId;
+
+    if (!activeOrgId) {
+      const listResponse = await auth.api.listOrganizations({ headers: authHeaders });
+      if (listResponse && listResponse.length > 0) {
+        activeOrgId = listResponse[0].id;
+        await auth.api.setActiveOrganization({
+          headers: authHeaders,
+          body: { organizationId: listResponse[0].id },
+        });
+      }
     }
-  }
 
-  const session = await auth.api.getSession({ headers });
-  if (!session) {
-    return { redirect: { destination: "/login", permanent: false } };
-  }
-
-  let activeOrgId = session.session.activeOrganizationId;
-
-  if (!activeOrgId) {
-    const listResponse = await auth.api.listOrganizations({ headers });
-    if (listResponse && listResponse.length > 0) {
-      activeOrgId = listResponse[0].id;
-      await auth.api.setActiveOrganization({
-        headers,
-        body: { organizationId: listResponse[0].id },
-      });
+    if (!activeOrgId) {
+      return { redirect: { destination: "/onboarding", permanent: false } };
     }
-  }
 
-  if (!activeOrgId) {
-    return { redirect: { destination: "/onboarding", permanent: false } };
-  }
+    const orgResponse = await auth.api.getFullOrganization({
+      headers: authHeaders,
+      query: { organizationId: activeOrgId },
+    });
 
-  const orgResponse = await auth.api.getFullOrganization({
-    headers,
-    query: { organizationId: activeOrgId },
-  });
+    if (!orgResponse) {
+      return { redirect: { destination: "/onboarding", permanent: false } };
+    }
 
-  if (!orgResponse) {
-    return { redirect: { destination: "/onboarding", permanent: false } };
-  }
+    // Check member role
+    const memberRows = await db
+      .select()
+      .from(member)
+      .where(and(eq(member.organizationId, activeOrgId), eq(member.userId, session.user.id)))
+      .limit(1);
 
-  // Check member role
-  const memberRows = await db
-    .select()
-    .from(member)
-    .where(and(eq(member.organizationId, activeOrgId), eq(member.userId, session.user.id)))
-    .limit(1);
+    const isAdmin =
+      memberRows.length > 0 &&
+      (memberRows[0].role === "owner" || memberRows[0].role === "admin");
 
-  const isAdmin =
-    memberRows.length > 0 &&
-    (memberRows[0].role === "owner" || memberRows[0].role === "admin");
+    // List all members with user info
+    const membersWithUsers = await db
+      .select({
+        id: member.id,
+        userId: member.userId,
+        role: member.role,
+        createdAt: member.createdAt,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+      })
+      .from(member)
+      .innerJoin(user, eq(member.userId, user.id))
+      .where(eq(member.organizationId, activeOrgId));
 
-  // List all members with user info
-  const membersWithUsers = await db
-    .select({
-      id: member.id,
-      userId: member.userId,
-      role: member.role,
-      createdAt: member.createdAt,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
+    // List all teams the user belongs to for team switcher
+    const allOrgs = await auth.api.listOrganizations({ headers: authHeaders });
+    const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
+
+    return {
+      props: {
+        userName: session.user.name,
+        teamName: orgResponse.name,
+        teamId: activeOrgId,
+        isAdmin,
+        currentUserId: session.user.id,
+        members: membersWithUsers.map((m) => ({
+          ...m,
+          createdAt: m.createdAt.toISOString(),
+        })),
+        teams,
       },
-    })
-    .from(member)
-    .innerJoin(user, eq(member.userId, user.id))
-    .where(eq(member.organizationId, activeOrgId));
-
-  // List all teams the user belongs to for team switcher
-  const allOrgs = await auth.api.listOrganizations({ headers });
-  const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
-
-  return {
-    props: {
-      userName: session.user.name,
-      teamName: orgResponse.name,
-      teamId: activeOrgId,
-      isAdmin,
-      currentUserId: session.user.id,
-      members: membersWithUsers.map((m) => ({
-        ...m,
-        createdAt: m.createdAt.toISOString(),
-      })),
-      teams,
-    },
-  };
-};
+    };
+  }
+);

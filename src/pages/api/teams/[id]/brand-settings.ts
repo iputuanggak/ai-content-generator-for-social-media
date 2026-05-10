@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import { member, brandSettings } from "@/lib/db/schema";
 import type { Tone, Platform } from "@/lib/content-adapter";
+import { buildReqHeaders } from "@/lib/with-session";
 
 const VALID_TONES: Tone[] = ["professional", "casual", "humorous", "inspirational"];
 const VALID_PLATFORMS: Platform[] = [
@@ -17,16 +18,6 @@ const VALID_PLATFORMS: Platform[] = [
   "pinterest",
 ];
 
-function getHeaders(req: NextApiRequest): Headers {
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(", ") : value);
-    }
-  }
-  return headers;
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "GET") return handleGet(req, res);
   if (req.method === "PUT") return handlePut(req, res);
@@ -34,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth.api.getSession({ headers: getHeaders(req) });
+  const session = await auth.api.getSession({ headers: buildReqHeaders(req) });
   if (!session) return res.status(401).json({ error: "Unauthorized" });
 
   const teamId = req.query.id as string;
@@ -60,7 +51,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function handlePut(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth.api.getSession({ headers: getHeaders(req) });
+  const session = await auth.api.getSession({ headers: buildReqHeaders(req) });
   if (!session) return res.status(401).json({ error: "Unauthorized" });
 
   const teamId = req.query.id as string;

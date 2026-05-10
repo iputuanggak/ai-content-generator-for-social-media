@@ -3,10 +3,11 @@
  *
  * Orchestrates the full content generation event:
  * 1. Reads Brand Settings from the database
- * 2. Calls Content Adapter per platform to build prompt pairs
- * 3. Calls OpenRouter Client concurrently for all platforms
- * 4. Persists Generation record + PlatformOutput rows to Neon
- * 5. Returns the full result
+ * 2. Inserts the Generation record (before any LLM calls so streaming can reference it)
+ * 3. Calls Content Adapter per platform to build prompt pairs
+ * 4. Calls OpenRouter Client concurrently for all platforms
+ * 5. Persists each PlatformOutput row as it completes, then fires onPlatformOutput
+ * 6. Returns the full result
  */
 
 import { randomUUID } from "crypto";
@@ -22,9 +23,20 @@ export interface GenerateContentInput {
   topic: string;
   tone: Tone;
   intendedPublishAt?: Date;
+  /**
+   * Called as each platform output is persisted to the database.
+   * Use this hook to stream results to the client (e.g. via SSE) as they arrive.
+   */
+  onPlatformOutput?: (result: {
+    platform: Platform;
+    content: string;
+    platformOutputId: string;
+    generationId: string;
+  }) => void;
 }
 
 export interface PlatformOutputResult {
+  platformOutputId: string;
   platform: Platform;
   content: string;
 }
@@ -65,24 +77,7 @@ export async function generateContent(
   const modelId = brandSetting.modelId;
   const brandVoice = brandSetting.brandVoice;
 
-  // 2. Build prompt pairs per platform
-  const promptPairs = activePlatforms.map((platform) =>
-    buildPrompts(input.topic, input.tone, brandVoice, platform)
-  );
-
-  // 3. Call OpenRouter concurrently for all platforms
-  const generatedTexts = await Promise.all(
-    promptPairs.map((pair, i) =>
-      callOpenRouter({
-        modelId,
-        systemPrompt: pair.systemPrompt,
-        userPrompt: pair.userPrompt,
-        fetchFn: deps.openRouterFetch,
-      })
-    )
-  );
-
-  // 4. Persist Generation record
+  // 2. Insert generation record first so the ID is available for streaming
   const generationId = randomUUID();
   const now = new Date();
 
@@ -96,26 +91,47 @@ export async function generateContent(
     createdAt: now,
   });
 
-  // 5. Persist PlatformOutput rows
-  const platformOutputRows = activePlatforms.map((platform, i) => ({
-    id: randomUUID(),
-    generationId,
-    platform,
-    content: generatedTexts[i],
-    editedContent: null,
-    updatedAt: now,
-  }));
+  // 3. Generate concurrently; persist each output as it arrives and notify via callback
+  const platformOutputResults: PlatformOutputResult[] = [];
 
-  await dbClient.insert(platformOutput).values(platformOutputRows);
+  await Promise.all(
+    activePlatforms.map(async (platform) => {
+      const { systemPrompt, userPrompt } = buildPrompts(
+        input.topic,
+        input.tone,
+        brandVoice,
+        platform
+      );
+
+      const content = await callOpenRouter({
+        modelId,
+        systemPrompt,
+        userPrompt,
+        fetchFn: deps.openRouterFetch,
+      });
+
+      const platformOutputId = randomUUID();
+
+      await dbClient.insert(platformOutput).values({
+        id: platformOutputId,
+        generationId,
+        platform,
+        content,
+        editedContent: null,
+        updatedAt: new Date(),
+      });
+
+      input.onPlatformOutput?.({ platform, content, platformOutputId, generationId });
+
+      platformOutputResults.push({ platformOutputId, platform, content });
+    })
+  );
 
   return {
     generationId,
     organizationId: input.organizationId,
     topic: input.topic,
     tone: input.tone,
-    platformOutputs: activePlatforms.map((platform, i) => ({
-      platform,
-      content: generatedTexts[i],
-    })),
+    platformOutputs: platformOutputResults,
   };
 }
