@@ -1,11 +1,11 @@
 ---
 name: ralph
-description: Autonomous issue-driven build loop. Reads open GitHub Issues labelled ready-for-agent, picks the next unblocked one, implements it end-to-end using a sub-agent, verifies the build and tests pass, commits and pushes, closes the issue, then repeats until no unblocked issues remain. Supports parallel execution via git worktree when multiple issues are unblocked. Use when user says "ralph loop", "start building", "implement all issues", "run ralph", or invokes /ralph.
+description: Autonomous issue-driven build loop. Reads open GitHub Issues labelled ready-for-agent, picks the next unblocked one, implements it end-to-end using a sub-agent, verifies the build and tests pass, commits and pushes, closes the issue, then repeats until no unblocked issues remain. Use when user says "ralph loop", "start building", "implement all issues", "run ralph", or invokes /ralph.
 ---
 
 # Skill: Ralph Loop
 
-Autonomous loop that implements GitHub Issues in dependency order, with optional parallel execution via git worktree.
+Autonomous loop that implements GitHub Issues in dependency order, one issue at a time.
 
 ## Quick start
 
@@ -95,22 +95,7 @@ gh issue view <N> --repo <repo> \
 
 **If no unblocked issues exist** → stop and report to the user.
 
-**If exactly 1 unblocked issue** → proceed to Step 3 (sequential).
-
-**If ≥2 unblocked issues** → list them to the user:
-```
-The following issues are currently unblocked:
-  #<N1> <title1>
-  #<N2> <title2>
-  ...
-
-Run in parallel (git worktree) or sequentially?
-WARNING: parallel mode may hit merge conflicts — the loop will halt and ask for
-manual resolution if a rebase conflict occurs.
-```
-Wait for the user's answer before proceeding.
-- User chooses **sequential** → proceed to Step 3 with the lowest-numbered unblocked issue.
-- User chooses **parallel** → proceed to Step 3P (parallel branch).
+**If ≥1 unblocked issues exist** → proceed to Step 3 with the lowest-numbered unblocked issue.
 
 ---
 
@@ -164,73 +149,7 @@ Return EXACTLY this JSON structure (no extra text outside the JSON):
 
 ---
 
-### Step 3P — Implement with parallel sub-agents (git worktree)
-
-For each unblocked issue `<N>`:
-
-**3P-a. Clean up any stale branch and create a worktree:**
-```bash
-# Remove stale branch if it exists
-git branch --list "issue-<N>" | grep -q . && git branch -D "issue-<N>"
-# Create worktree branching off <base-branch>
-git worktree add ../worktree-<N> -b issue-<N> <base-branch>
-```
-
-**3P-b. Spawn one `general` sub-agent per worktree** with this prompt (fill in `<N>`, `<title>`, `<full issue body>`, `<absolute worktree path>`):
-
-```
-You are implementing GitHub Issue #<N>: "<title>" on the repo
-<repo>.
-
-Working directory: <absolute path to ../worktree-<N>>
-
-IMPORTANT: All file edits, reads, and shell commands (including npm run build)
-MUST operate inside the working directory above. Do NOT touch the main repo directory.
-
-Context:
-- Read CONTEXT.md (inside your working directory) before writing any code.
-  It contains the tech stack, architecture decisions, and domain glossary
-  for this project.
-- Read the docs in any `node_modules/<framework>/dist/docs/` directories
-  relevant to your implementation before writing framework-specific code.
-
-Issue body:
-<full issue body>
-
-Instructions:
-1. Before writing any code, load the `zoom-out` skill to understand
-   the relevant area of the codebase.
-2. Implement everything described in "What to build".
-3. Every acceptance criterion must be met before you finish.
-4. Unless the issue is purely `chore` or `docs` type, always load
-   the `tdd` skill and use the red-green-refactor loop to write
-   tests before implementation.
-5. If tests fail and the root cause is not immediately obvious, load
-   the `diagnose` skill to work through the failure systematically
-   before attempting a fix.
-6. If you cannot make progress after 3 attempts on any single blocker,
-   STOP immediately — do not keep retrying.
-7. Do NOT run any git commands (add, commit, push, worktree, branch).
-   The supervisor owns all git operations.
-8. Do NOT close the issue — the supervisor will do that.
-9. You MUST always return a structured result, even on failure.
-   Never return an empty response.
-
-Return EXACTLY this JSON structure (no extra text outside the JSON):
-{
-  "status": "done" | "stuck",
-  "summary": "What was built and how to verify it",
-  "blockers": "Describe what is blocking you (empty string if status is done)",
-  "commitType": "feat" | "fix" | "refactor" | "chore" | "docs" | "test" | "perf",
-  "commitScope": "single lowercase word max 15 chars, e.g. auth, db, ui, api, content (empty string if none fits)"
-}
-```
-
-**3P-c. Wait for ALL sub-agents to finish** before proceeding to Step 4P.
-
----
-
-### Step 4 — Verify (sequential)
+### Step 4 — Verify
 
 After the sub-agent returns:
 
@@ -270,22 +189,6 @@ Same single-retry + halt-on-failure policy as build.
 
 ---
 
-### Step 4P — Verify (parallel)
-
-For each worktree in sequence:
-
-**4P-a. Validate the sub-agent response** using the same rules as Step 4-a.
-If any sub-agent returned `status: stuck` or an invalid response:
-- Clean up ALL worktrees:
-  ```bash
-  git worktree remove ../worktree-<N> --force
-  git branch -D issue-<N>
-  ```
-  (repeat for each worktree)
-- Halt the loop with the halt message. Stop here.
-
----
-
 ### Step 4b — Commit and push
 
 **Validate and build the commit message:**
@@ -298,33 +201,11 @@ If any sub-agent returned `status: stuck` or an invalid response:
    - With scope: `<commitType>(<commitScope>): #<N> <title>`
    - Without scope: `<commitType>: #<N> <title>`
 
-**For sequential mode:**
+**Commit and push:**
 ```bash
 git add -A
 git commit -m "<commitType>(<commitScope>): #<N> <title>"
 git push
-```
-
-**For parallel mode** — for each issue branch in sequence:
-```bash
-# Stage and commit inside worktree
-git -C ../worktree-<N> add -A
-git -C ../worktree-<N> commit -m "<commitType>(<commitScope>): #<N> <title>"
-
-# Merge into <base-branch> (fast-forward only)
-git checkout <base-branch>
-git merge --ff-only issue-<N>
-# If merge fails → halt immediately:
-#   "Cannot fast-forward <base-branch> onto issue-<N>.
-#    Rebase the branch manually: git checkout issue-<N> && git rebase <base-branch>
-#    Then re-run ralph to continue."
-# Clean up all remaining worktrees before halting.
-
-git push
-
-# Clean up
-git worktree remove ../worktree-<N>
-git branch -D issue-<N>
 ```
 
 ---
@@ -335,8 +216,6 @@ git branch -D issue-<N>
 gh issue close <N> --repo <repo> \
   --comment "Implemented and verified. Committed as: <commit message>"
 ```
-
-For parallel mode, close each issue after its branch is merged.
 
 ---
 
@@ -362,8 +241,6 @@ Otherwise run `git pull --ff-only`, then go back to Step 2.
 - **Halt on stuck.** If a sub-agent returns `status: stuck`, or returns an empty/malformed response → halt the loop and report to the user. Do not skip and continue.
 - **Halt message must include:** issue number, title, blocker description, and instructions for the user to resume (`fix the issue description` or `remove the ready-for-agent label`).
 - **Validate commit fields.** Always validate `commitType` and `commitScope` before building the commit message. Never use an unvalidated value from the sub-agent directly.
-- **Clean up worktrees on halt.** If ralph halts during parallel mode, remove all open worktrees and branches before stopping.
-- **Merge must be fast-forward.** Use `git merge --ff-only`. If fast-forward is not possible, halt and instruct the user to rebase the branch manually onto main before re-running ralph.
 - **Stop on ambiguity.** If an issue contradicts `CONTEXT.md` or an ADR → relabel it and halt:
   ```bash
   gh issue edit <N> --repo <repo> \
