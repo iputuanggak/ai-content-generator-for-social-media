@@ -43,30 +43,44 @@ export default function AcceptInvitationPage() {
 
   if (isLoggedIn === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <p className="text-sm text-zinc-500">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 via-white to-cyan-50">
+        <div className="flex flex-col items-center gap-4">
+          {/* Pulsing ContentGen logo */}
+          <div className="flex h-12 w-12 animate-pulse items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/30">
+            <span className="text-xl font-bold text-primary-foreground">C</span>
+          </div>
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        </div>
       </div>
     );
   }
 
   if (!isLoggedIn) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <h1 className="mb-2 text-2xl font-semibold text-zinc-900">Accept Invitation</h1>
-          <p className="mb-6 text-sm text-zinc-500">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 via-white to-cyan-50">
+        <div className="w-full max-w-md rounded-2xl border border-teal-100 bg-white/90 p-8 shadow-lg shadow-teal-100/40 backdrop-blur-sm">
+          {/* ContentGen wordmark */}
+          <div className="mb-6 flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <span className="text-sm font-bold text-primary-foreground">C</span>
+            </div>
+            <span className="text-lg font-semibold text-foreground">ContentGen</span>
+          </div>
+
+          <h1 className="mb-2 text-2xl font-semibold text-foreground">Accept Invitation</h1>
+          <p className="mb-6 text-sm text-muted-foreground">
             You need to sign in or create an account to accept this invitation.
           </p>
           <div className="flex flex-col gap-3">
             <Link
               href={`/login?invitationId=${invitationId ?? ""}`}
-              className="block w-full rounded-lg bg-zinc-900 px-6 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+              className="block w-full rounded-lg bg-primary px-6 py-2.5 text-center text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Sign in
             </Link>
             <Link
               href={`/register?invitationId=${invitationId ?? ""}`}
-              className="block w-full rounded-lg border border-zinc-200 px-6 py-2.5 text-center text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              className="block w-full rounded-lg border border-border px-6 py-2.5 text-center text-sm font-medium text-foreground/70 transition-colors hover:bg-muted"
             >
               Create account
             </Link>
@@ -77,28 +91,36 @@ export default function AcceptInvitationPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-      <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-2 text-2xl font-semibold text-zinc-900">Accept Invitation</h1>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 via-white to-cyan-50">
+      <div className="w-full max-w-md rounded-2xl border border-teal-100 bg-white/90 p-8 shadow-lg shadow-teal-100/40 backdrop-blur-sm">
+        {/* ContentGen wordmark */}
+        <div className="mb-6 flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <span className="text-sm font-bold text-primary-foreground">C</span>
+          </div>
+          <span className="text-lg font-semibold text-foreground">ContentGen</span>
+        </div>
+
+        <h1 className="mb-2 text-2xl font-semibold text-foreground">Accept Invitation</h1>
 
         {status === "success" ? (
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-muted-foreground">
             You have successfully joined the team. Redirecting to dashboard…
           </p>
         ) : (
           <>
-            <p className="mb-6 text-sm text-zinc-500">
+            <p className="mb-6 text-sm text-muted-foreground">
               You have been invited to join a team. Click below to accept.
             </p>
 
             {error && (
-              <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+              <p className="mb-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>
             )}
 
             <button
               onClick={handleAccept}
               disabled={status === "loading" || !invitationId}
-              className="w-full rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {status === "loading" ? "Accepting…" : "Accept Invitation"}
             </button>
