@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { authClient } from "@/lib/auth-client";
 import { auth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -11,6 +11,13 @@ import type { GetServerSideProps } from "next";
 import type { Tone, Platform } from "@/lib/content-adapter";
 import { PLATFORM_LABELS } from "@/lib/platform-metadata";
 import { requireAuthPage } from "@/lib/require-auth-page";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface PlatformOutputState {
   platformOutputId: string;
@@ -19,7 +26,6 @@ interface PlatformOutputState {
   savedContent: string;
   isSaving: boolean;
   isRegenerating: boolean;
-  copySuccess: boolean;
 }
 
 interface DashboardProps {
@@ -37,6 +43,28 @@ const TONE_OPTIONS: { value: Tone; label: string }[] = [
   { value: "humorous", label: "Humorous" },
   { value: "inspirational", label: "Inspirational" },
 ];
+
+const PLATFORM_CHAR_LIMITS: Record<string, number> = {
+  twitter: 280,
+  linkedin: 3000,
+  instagram: 2200,
+  facebook: 63206,
+  tiktok: 2200,
+  youtube: 5000,
+  threads: 500,
+  pinterest: 500,
+};
+
+const PLATFORM_BADGE_STYLES: Record<string, string> = {
+  twitter: "bg-sky-100 text-sky-700",
+  linkedin: "bg-blue-100 text-blue-700",
+  instagram: "bg-pink-100 text-pink-700",
+  facebook: "bg-indigo-100 text-indigo-700",
+  tiktok: "bg-zinc-100 text-zinc-700",
+  youtube: "bg-red-100 text-red-700",
+  threads: "bg-neutral-100 text-neutral-700",
+  pinterest: "bg-rose-100 text-rose-700",
+};
 
 export default function DashboardPage({
   userName,
@@ -143,7 +171,6 @@ export default function DashboardPage({
                       savedContent: parsed.content!,
                       isSaving: false,
                       isRegenerating: false,
-                      copySuccess: false,
                     },
                   }));
               setLoadingPlatforms((prev) => {
@@ -197,6 +224,7 @@ export default function DashboardPage({
             isSaving: false,
           },
         }));
+        toast("Changes saved");
       } else {
         setOutputs((prev) => ({
           ...prev,
@@ -216,16 +244,7 @@ export default function DashboardPage({
     if (!output) return;
     try {
       await navigator.clipboard.writeText(output.editedContent);
-      setOutputs((prev) => ({
-        ...prev,
-        [platform]: { ...prev[platform], copySuccess: true },
-      }));
-      setTimeout(() => {
-        setOutputs((prev) => ({
-          ...prev,
-          [platform]: { ...prev[platform], copySuccess: false },
-        }));
-      }, 2000);
+      toast("Copied to clipboard");
     } catch {
       // clipboard access denied — silently fail
     }
@@ -258,6 +277,7 @@ export default function DashboardPage({
             isRegenerating: false,
           },
         }));
+        toast("Content regenerated");
       } else {
         setOutputs((prev) => ({
           ...prev,
@@ -315,66 +335,73 @@ export default function DashboardPage({
           <div className="space-y-10">
             {/* Generation form */}
             <section>
-              <h1 className="mb-6 text-2xl font-semibold text-zinc-900">Generate Content</h1>
-              <form onSubmit={handleGenerate} className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="topic"
-                    className="mb-1.5 block text-sm font-medium text-zinc-700"
-                  >
-                    Topic
-                  </label>
-                  <textarea
-                    id="topic"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    placeholder="What do you want to post about?"
-                    rows={3}
-                    className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
-                    required
-                  />
-                </div>
+              <h1 className="mb-2 text-3xl font-bold text-zinc-900">Generate Content</h1>
+              <p className="mb-6 text-sm text-zinc-500">
+                Describe your topic and choose a tone — we&apos;ll adapt it for each platform.
+              </p>
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/40 p-6 shadow-sm">
+                <form onSubmit={handleGenerate} className="space-y-5">
+                  <div>
+                    <label
+                      htmlFor="topic"
+                      className="mb-1.5 block text-sm font-semibold text-zinc-800"
+                    >
+                      Topic
+                    </label>
+                    <textarea
+                      id="topic"
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                      placeholder="What do you want to post about?"
+                      rows={4}
+                      className="w-full rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder-zinc-400 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <label
-                    htmlFor="tone"
-                    className="mb-1.5 block text-sm font-medium text-zinc-700"
-                  >
-                    Tone
-                  </label>
-                  <select
-                    id="tone"
-                    value={tone}
-                    onChange={(e) => setTone(e.target.value as Tone)}
-                    className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
-                  >
-                    {TONE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div>
+                    <label
+                      htmlFor="tone"
+                      className="mb-1.5 block text-sm font-semibold text-zinc-800"
+                    >
+                      Tone
+                    </label>
+                    <select
+                      id="tone"
+                      value={tone}
+                      onChange={(e) => setTone(e.target.value as Tone)}
+                      className="rounded-xl border border-amber-200 bg-white px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100 accent-teal-600"
+                    >
+                      {TONE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {error && (
-                  <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
-                )}
+                  {error && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {error}
+                    </div>
+                  )}
 
-                <button
-                  type="submit"
-                  disabled={isGenerating || !topic.trim()}
-                  className="rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isGenerating ? "Generating…" : "Generate"}
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    disabled={isGenerating || !topic.trim()}
+                    className="rounded-xl bg-teal-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isGenerating ? "Generating…" : "Generate"}
+                  </button>
+                </form>
+              </div>
             </section>
 
             {/* Results area */}
             {showResultsArea && (
               <section>
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-zinc-900">Platform Outputs</h2>
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-xl font-bold text-zinc-900">Platform Outputs</h2>
 
                   {/* Publish date picker — shown once we have a generationId */}
                   {currentGenerationId && (
@@ -390,7 +417,7 @@ export default function DashboardPage({
                         type="datetime-local"
                         value={intendedPublishAt}
                         onChange={(e) => handlePublishDateChange(e.target.value)}
-                        className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+                        className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                       />
                       {isSavingPublishDate && (
                         <span className="text-xs text-zinc-400">Saving…</span>
@@ -399,64 +426,48 @@ export default function DashboardPage({
                   )}
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-5 sm:grid-cols-2">
                   {activePlatforms.map((platform) => {
                     const output = outputs[platform];
                     const isLoading = loadingPlatforms.has(platform);
                     const hasUnsavedChanges =
                       output && output.editedContent !== output.savedContent;
+                    const charLimit = PLATFORM_CHAR_LIMITS[platform];
+                    const charCount = output ? output.editedContent.length : 0;
+                    const overLimit = charLimit ? charCount > charLimit : false;
+                    const badgeStyle = PLATFORM_BADGE_STYLES[platform] ?? "bg-zinc-100 text-zinc-700";
 
                     return (
                       <div
                         key={platform}
                         className={[
-                          "rounded-xl border bg-white p-5 shadow-sm",
-                          hasUnsavedChanges ? "border-amber-300" : "border-zinc-200",
+                          "flex flex-col rounded-2xl border bg-white p-5 shadow-sm transition",
+                          hasUnsavedChanges
+                            ? "border-amber-300 shadow-amber-100"
+                            : "border-zinc-200",
                         ].join(" ")}
                       >
-                        <div className="mb-3 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-zinc-900">
-                              {PLATFORM_LABELS[platform]}
+                        {/* Card header */}
+                        <div className="mb-3 flex items-center gap-2">
+                          <span
+                            className={[
+                              "rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide",
+                              badgeStyle,
+                            ].join(" ")}
+                          >
+                            {PLATFORM_LABELS[platform]}
+                          </span>
+                          {isLoading && (
+                            <span className="text-xs text-zinc-400">Generating…</span>
+                          )}
+                          {hasUnsavedChanges && (
+                            <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
+                              Unsaved
                             </span>
-                            {isLoading && (
-                              <span className="text-xs text-zinc-400">Generating…</span>
-                            )}
-                            {hasUnsavedChanges && (
-                              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
-                                Unsaved
-                              </span>
-                            )}
-                          </div>
-
-                          {output && !isLoading && (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleRegenerate(platform)}
-                                disabled={output.isRegenerating}
-                                className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-                                title="Regenerate content"
-                              >
-                                {output.isRegenerating ? "Regenerating…" : "Regenerate"}
-                              </button>
-                              <button
-                                onClick={() => handleCopy(platform)}
-                                className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
-                                title="Copy to clipboard"
-                              >
-                                {output.copySuccess ? "Copied!" : "Copy"}
-                              </button>
-                              <button
-                                onClick={() => handleSave(platform)}
-                                disabled={output.isSaving || !hasUnsavedChanges}
-                                className="rounded-md bg-zinc-900 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-                              >
-                                {output.isSaving ? "Saving…" : "Save"}
-                              </button>
-                            </div>
                           )}
                         </div>
 
+                        {/* Content area */}
                         {isLoading || (output && output.isRegenerating) ? (
                           <div className="space-y-2">
                             <div className="h-3 w-full animate-pulse rounded bg-zinc-100" />
@@ -464,12 +475,70 @@ export default function DashboardPage({
                             <div className="h-3 w-3/5 animate-pulse rounded bg-zinc-100" />
                           </div>
                         ) : output ? (
-                          <textarea
-                            value={output.editedContent}
-                            onChange={(e) => handleEditContent(platform, e.target.value)}
-                            rows={6}
-                            className="w-full resize-y rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5 text-sm leading-relaxed text-zinc-700 outline-none focus:border-zinc-300 focus:bg-white focus:ring-2 focus:ring-zinc-100"
-                          />
+                          <>
+                            <textarea
+                              value={output.editedContent}
+                              onChange={(e) => handleEditContent(platform, e.target.value)}
+                              rows={6}
+                              className="w-full resize-y rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-2.5 text-sm leading-relaxed text-zinc-700 outline-none transition focus:border-teal-300 focus:bg-white focus:ring-2 focus:ring-teal-100"
+                            />
+                            {/* Character count */}
+                            {charLimit && (
+                              <p
+                                className={[
+                                  "mt-1 text-right text-xs",
+                                  overLimit ? "text-red-500 font-semibold" : "text-zinc-400",
+                                ].join(" ")}
+                              >
+                                {charCount} / {charLimit}
+                              </p>
+                            )}
+
+                            {/* Action buttons — below textarea */}
+                            <div className="mt-3 flex items-center justify-end gap-2">
+                              {/* Mobile: Regenerate in dropdown; desktop: visible button */}
+                              <div className="sm:hidden">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      className="rounded-lg border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50"
+                                      title="More actions"
+                                    >
+                                      ···
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onSelect={() => handleRegenerate(platform)}
+                                      disabled={output.isRegenerating}
+                                    >
+                                      {output.isRegenerating ? "Regenerating…" : "Regenerate"}
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                              <button
+                                onClick={() => handleRegenerate(platform)}
+                                disabled={output.isRegenerating}
+                                className="hidden sm:inline-flex rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                {output.isRegenerating ? "Regenerating…" : "Regenerate"}
+                              </button>
+                              <button
+                                onClick={() => handleCopy(platform)}
+                                className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50"
+                              >
+                                Copy
+                              </button>
+                              <button
+                                onClick={() => handleSave(platform)}
+                                disabled={output.isSaving || !hasUnsavedChanges}
+                                className="rounded-lg bg-teal-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                {output.isSaving ? "Saving…" : "Save"}
+                              </button>
+                            </div>
+                          </>
                         ) : null}
                       </div>
                     );
