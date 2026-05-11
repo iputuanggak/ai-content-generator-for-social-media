@@ -1,10 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { format, parseISO } from "date-fns";
 import { auth } from "@/lib/auth";
 import type { GetServerSideProps } from "next";
 import { requireAuthPage } from "@/lib/require-auth-page";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/date-picker";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 
 interface Generation {
   id: string;
@@ -121,30 +133,29 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
           <div className="flex-1 min-w-48">
             <label className="mb-1 block text-sm font-medium text-zinc-700">Search topic</label>
-            <input
+            <Input
               type="text"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               placeholder="e.g. summer sale"
-              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
             />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700">From</label>
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => { setFrom(e.target.value); setPage(1); }}
-              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100 sm:w-auto"
+            <DatePicker
+              value={from ? parseISO(from) : undefined}
+              onChange={(date) => { setFrom(date ? format(date, "yyyy-MM-dd") : ""); setPage(1); }}
+              placeholder="From date"
+              className="sm:w-auto"
             />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700">To</label>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => { setTo(e.target.value); setPage(1); }}
-              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100 sm:w-auto"
+            <DatePicker
+              value={to ? parseISO(to) : undefined}
+              onChange={(date) => { setTo(date ? format(date, "yyyy-MM-dd") : ""); setPage(1); }}
+              placeholder="To date"
+              className="sm:w-auto"
             />
           </div>
         </div>
@@ -204,12 +215,13 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
                     </span>
                   </div>
                 </Link>
-                <button
+                <Button
+                  variant="destructive"
+                  size="xs"
                   onClick={() => setDeleteId(gen.id)}
-                  className="ml-4 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 hover:border-red-300"
                 >
                   Delete
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -221,41 +233,39 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
             <span className="text-sm text-zinc-500">
               {total} total &middot; Page {page} of {totalPages}
             </span>
-            <div className="flex gap-2">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              {/* Page number indicators */}
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const pageNum = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
-                if (pageNum < 1 || pageNum > totalPages) return null;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={[
-                      "rounded-lg border px-3 py-1.5 text-sm font-medium transition",
-                      pageNum === page
-                        ? "border-teal-500 bg-teal-600 text-white"
-                        : "border-amber-200 bg-white text-zinc-700 hover:bg-amber-50",
-                    ].join(" ")}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-                className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
+            <Pagination className="mx-0 w-auto">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    aria-disabled={page <= 1}
+                    className={page <= 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const pageNum = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
+                  if (pageNum < 1 || pageNum > totalPages) return null;
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink
+                        isActive={pageNum === page}
+                        onClick={() => setPage(pageNum)}
+                        className="cursor-pointer"
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    aria-disabled={page >= totalPages}
+                    className={page >= totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         )}
       </main>
