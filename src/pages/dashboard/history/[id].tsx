@@ -4,10 +4,16 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { generation, platformOutput } from "@/lib/db/schema";
-import type { GetServerSideProps } from "next";
 import { PLATFORM_LABELS } from "@/lib/platform-metadata";
 import { requireAuthPage } from "@/lib/require-auth-page";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface PlatformOutputData {
   id: string;
@@ -38,8 +44,29 @@ interface OutputState {
   savedContent: string;
   isSaving: boolean;
   isRegenerating: boolean;
-  copySuccess: boolean;
 }
+
+const PLATFORM_CHAR_LIMITS: Record<string, number> = {
+  twitter: 280,
+  linkedin: 3000,
+  instagram: 2200,
+  facebook: 63206,
+  tiktok: 2200,
+  youtube: 5000,
+  threads: 500,
+  pinterest: 500,
+};
+
+const PLATFORM_BADGE_STYLES: Record<string, string> = {
+  twitter: "bg-sky-100 text-sky-700",
+  linkedin: "bg-blue-100 text-blue-700",
+  instagram: "bg-pink-100 text-pink-700",
+  facebook: "bg-indigo-100 text-indigo-700",
+  tiktok: "bg-zinc-100 text-zinc-700",
+  youtube: "bg-red-100 text-red-700",
+  threads: "bg-neutral-100 text-neutral-700",
+  pinterest: "bg-rose-100 text-rose-700",
+};
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -69,7 +96,6 @@ export default function HistoryDetailPage({
         savedContent: current,
         isSaving: false,
         isRegenerating: false,
-        copySuccess: false,
       };
     }
     return init;
@@ -121,17 +147,20 @@ export default function HistoryDetailPage({
             isSaving: false,
           },
         }));
+        toast("Changes saved");
       } else {
         setOutputs((prev) => ({
           ...prev,
           [outputId]: { ...prev[outputId], isSaving: false },
         }));
+        toast.error("Failed to save changes");
       }
     } catch {
       setOutputs((prev) => ({
         ...prev,
         [outputId]: { ...prev[outputId], isSaving: false },
       }));
+      toast.error("Failed to save changes");
     }
   }
 
@@ -157,17 +186,20 @@ export default function HistoryDetailPage({
             isRegenerating: false,
           },
         }));
+        toast("Content regenerated");
       } else {
         setOutputs((prev) => ({
           ...prev,
           [outputId]: { ...prev[outputId], isRegenerating: false },
         }));
+        toast.error("Regeneration failed");
       }
     } catch {
       setOutputs((prev) => ({
         ...prev,
         [outputId]: { ...prev[outputId], isRegenerating: false },
       }));
+      toast.error("Regeneration failed");
     }
   }
 
@@ -176,18 +208,9 @@ export default function HistoryDetailPage({
     if (!output) return;
     try {
       await navigator.clipboard.writeText(output.editedContent);
-      setOutputs((prev) => ({
-        ...prev,
-        [outputId]: { ...prev[outputId], copySuccess: true },
-      }));
-      setTimeout(() => {
-        setOutputs((prev) => ({
-          ...prev,
-          [outputId]: { ...prev[outputId], copySuccess: false },
-        }));
-      }, 2000);
+      toast("Copied to clipboard");
     } catch {
-      // clipboard access denied — silently fail
+      toast.error("Could not copy to clipboard");
     }
   }
 
@@ -208,14 +231,18 @@ export default function HistoryDetailPage({
         </Link>
 
         {/* Generation metadata */}
-        <div className="mb-8 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h1 className="mb-1 text-xl font-semibold text-zinc-900">{gen.topic}</h1>
-          <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
-            <span>Tone: {capitalize(gen.tone)}</span>
-            <span>Created: {new Date(gen.createdAt).toLocaleString()}</span>
+        <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50/40 p-6 shadow-sm">
+          <h1 className="mb-3 text-xl font-semibold text-zinc-900">{gen.topic}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-700">
+              {capitalize(gen.tone)}
+            </span>
+            <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
+              Created {new Date(gen.createdAt).toLocaleString()}
+            </span>
           </div>
 
-          <div className="mt-4 flex items-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center gap-3">
             <label htmlFor="publish-date" className="text-sm font-medium text-zinc-700 whitespace-nowrap">
               Intended publish date
             </label>
@@ -224,7 +251,7 @@ export default function HistoryDetailPage({
               type="datetime-local"
               value={intendedPublishAt}
               onChange={(e) => handlePublishDateChange(e.target.value)}
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+              className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
             />
             {isSavingPublishDate && <span className="text-xs text-zinc-400">Saving…</span>}
           </div>
@@ -237,50 +264,37 @@ export default function HistoryDetailPage({
             const state = outputs[po.id];
             if (!state) return null;
             const hasUnsavedChanges = state.editedContent !== state.savedContent;
+            const charLimit = PLATFORM_CHAR_LIMITS[po.platform];
+            const charCount = state.editedContent.length;
+            const overLimit = charLimit ? charCount > charLimit : false;
+            const badgeStyle = PLATFORM_BADGE_STYLES[po.platform] ?? "bg-zinc-100 text-zinc-700";
 
             return (
               <div
                 key={po.id}
                 className={[
-                  "rounded-xl border bg-white p-5 shadow-sm",
-                  hasUnsavedChanges ? "border-amber-300" : "border-zinc-200",
+                  "flex flex-col rounded-2xl border bg-white p-5 shadow-sm transition",
+                  hasUnsavedChanges ? "border-amber-300 shadow-amber-100" : "border-zinc-200",
                 ].join(" ")}
               >
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-zinc-900">
-                      {PLATFORM_LABELS[po.platform as keyof typeof PLATFORM_LABELS] ?? po.platform}
+                {/* Card header */}
+                <div className="mb-3 flex items-center gap-2">
+                  <span
+                    className={[
+                      "rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide",
+                      badgeStyle,
+                    ].join(" ")}
+                  >
+                    {PLATFORM_LABELS[po.platform as keyof typeof PLATFORM_LABELS] ?? po.platform}
+                  </span>
+                  {hasUnsavedChanges && (
+                    <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
+                      Unsaved
                     </span>
-                    {hasUnsavedChanges && (
-                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
-                        Unsaved
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleRegenerate(po.id)}
-                      disabled={state.isRegenerating}
-                      className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-                      title="Regenerate content"
-                    >
-                      {state.isRegenerating ? "Regenerating…" : "Regenerate"}
-                    </button>
-                    <button
-                      onClick={() => handleCopy(po.id)}
-                      className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
-                    >
-                      {state.copySuccess ? "Copied!" : "Copy"}
-                    </button>
-                    <button
-                      onClick={() => handleSave(po.id)}
-                      disabled={state.isSaving || !hasUnsavedChanges}
-                      className="rounded-md bg-zinc-900 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {state.isSaving ? "Saving…" : "Save"}
-                    </button>
-                  </div>
+                  )}
                 </div>
+
+                {/* Content area */}
                 {state.isRegenerating ? (
                   <div className="space-y-2">
                     <div className="h-3 w-full animate-pulse rounded bg-zinc-100" />
@@ -288,12 +302,70 @@ export default function HistoryDetailPage({
                     <div className="h-3 w-3/5 animate-pulse rounded bg-zinc-100" />
                   </div>
                 ) : (
-                <textarea
-                  value={state.editedContent}
-                  onChange={(e) => handleEditContent(po.id, e.target.value)}
-                  rows={6}
-                  className="w-full resize-y rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5 text-sm leading-relaxed text-zinc-700 outline-none focus:border-zinc-300 focus:bg-white focus:ring-2 focus:ring-zinc-100"
-                />
+                  <>
+                    <textarea
+                      value={state.editedContent}
+                      onChange={(e) => handleEditContent(po.id, e.target.value)}
+                      rows={6}
+                      className="w-full resize-y rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-2.5 text-sm leading-relaxed text-zinc-700 outline-none transition focus:border-teal-300 focus:bg-white focus:ring-2 focus:ring-teal-100"
+                    />
+                    {/* Character count */}
+                    {charLimit && (
+                      <p
+                        className={[
+                          "mt-1 text-right text-xs",
+                          overLimit ? "text-red-500 font-semibold" : "text-zinc-400",
+                        ].join(" ")}
+                      >
+                        {charCount} / {charLimit}
+                      </p>
+                    )}
+
+                    {/* Action buttons — below textarea */}
+                    <div className="mt-3 flex items-center justify-end gap-2">
+                      {/* Mobile: Regenerate in dropdown; desktop: visible button */}
+                      <div className="sm:hidden">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className="rounded-lg border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50"
+                              title="More actions"
+                            >
+                              ···
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onSelect={() => handleRegenerate(po.id)}
+                              disabled={state.isRegenerating}
+                            >
+                              {state.isRegenerating ? "Regenerating…" : "Regenerate"}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <button
+                        onClick={() => handleRegenerate(po.id)}
+                        disabled={state.isRegenerating}
+                        className="hidden sm:inline-flex rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {state.isRegenerating ? "Regenerating…" : "Regenerate"}
+                      </button>
+                      <button
+                        onClick={() => handleCopy(po.id)}
+                        className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50"
+                      >
+                        Copy
+                      </button>
+                      <button
+                        onClick={() => handleSave(po.id)}
+                        disabled={state.isSaving || !hasUnsavedChanges}
+                        className="rounded-lg bg-teal-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {state.isSaving ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             );

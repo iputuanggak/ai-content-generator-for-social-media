@@ -4,6 +4,14 @@ import { auth } from "@/lib/auth";
 import type { GetServerSideProps } from "next";
 import { requireAuthPage } from "@/lib/require-auth-page";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Generation {
   id: string;
@@ -22,8 +30,25 @@ interface HistoryPageProps {
 
 const PAGE_SIZE = 20;
 
-function formatDate(iso: string | null) {
-  if (!iso) return null;
+function formatRelativeDate(iso: string): string {
+  const now = Date.now();
+  const then = new Date(iso).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return "just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} hour${diffHour === 1 ? "" : "s"} ago`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 30) return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
+  const diffMonth = Math.floor(diffDay / 30);
+  if (diffMonth < 12) return `${diffMonth} month${diffMonth === 1 ? "" : "s"} ago`;
+  const diffYear = Math.floor(diffMonth / 12);
+  return `${diffYear} year${diffYear === 1 ? "" : "s"} ago`;
+}
+
+function formatFullDate(iso: string): string {
   return new Date(iso).toLocaleString();
 }
 
@@ -100,7 +125,7 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
         <h1 className="mb-6 text-2xl font-semibold text-zinc-900">Generation History</h1>
 
         {/* Search and filters */}
-        <div className="mb-6 flex flex-wrap items-end gap-4">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
           <div className="flex-1 min-w-48">
             <label className="mb-1 block text-sm font-medium text-zinc-700">Search topic</label>
             <input
@@ -108,7 +133,7 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               placeholder="e.g. summer sale"
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-400"
+              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
             />
           </div>
           <div>
@@ -117,7 +142,7 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
               type="date"
               value={from}
               onChange={(e) => { setFrom(e.target.value); setPage(1); }}
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400"
+              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100 sm:w-auto"
             />
           </div>
           <div>
@@ -126,7 +151,7 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
               type="date"
               value={to}
               onChange={(e) => { setTo(e.target.value); setPage(1); }}
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400"
+              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100 sm:w-auto"
             />
           </div>
         </div>
@@ -135,41 +160,60 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl bg-zinc-100" />
+              <div key={i} className="h-20 animate-pulse rounded-xl bg-amber-50" />
             ))}
           </div>
         ) : generations.length === 0 ? (
-          <div className="rounded-xl border border-zinc-200 bg-white px-6 py-12 text-center">
-            <p className="text-zinc-500">No generations found.</p>
-            <Link
-              href="/dashboard"
-              className="mt-3 inline-block text-sm font-medium text-zinc-900 underline underline-offset-2"
-            >
-              Create your first generation
-            </Link>
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-6 py-12 text-center">
+            <p className="text-lg font-medium text-amber-800">No generations found</p>
+            <p className="mt-1 text-sm text-amber-700">
+              {search || from || to
+                ? "Try adjusting your search or date filters."
+                : "You haven't generated any content yet."}
+            </p>
+            {!search && !from && !to && (
+              <Link
+                href="/dashboard"
+                className="mt-4 inline-block rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700"
+              >
+                Create your first generation
+              </Link>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
             {generations.map((gen) => (
               <div
                 key={gen.id}
-                className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm"
+                className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm transition hover:border-amber-200 hover:shadow-md"
               >
                 <Link href={`/dashboard/history/${gen.id}`} className="flex-1 min-w-0 group">
-                  <p className="font-medium text-zinc-900 group-hover:underline truncate">
+                  <p className="font-semibold text-zinc-900 group-hover:underline truncate text-base">
                     {gen.topic}
                   </p>
-                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-zinc-500">
-                    <span>Tone: {capitalize(gen.tone)}</span>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-700">
+                      {capitalize(gen.tone)}
+                    </span>
                     {gen.intendedPublishAt && (
-                      <span>Publish: {formatDate(gen.intendedPublishAt)}</span>
+                      <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                        <span>📅</span>
+                        <span title={formatFullDate(gen.intendedPublishAt)}>
+                          {formatFullDate(gen.intendedPublishAt)}
+                        </span>
+                      </span>
                     )}
-                    <span>Created: {formatDate(gen.createdAt)}</span>
+                    <span
+                      className="text-xs text-zinc-400"
+                      title={formatFullDate(gen.createdAt)}
+                    >
+                      {formatRelativeDate(gen.createdAt)}
+                    </span>
                   </div>
                 </Link>
                 <button
                   onClick={() => setDeleteId(gen.id)}
-                  className="ml-4 rounded-md border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                  className="ml-4 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 hover:border-red-300"
                 >
                   Delete
                 </button>
@@ -188,14 +232,33 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 disabled:opacity-40"
+                className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
+              {/* Page number indicators */}
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
+                if (pageNum < 1 || pageNum > totalPages) return null;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setPage(pageNum)}
+                    className={[
+                      "rounded-lg border px-3 py-1.5 text-sm font-medium transition",
+                      pageNum === page
+                        ? "border-teal-500 bg-teal-600 text-white"
+                        : "border-amber-200 bg-white text-zinc-700 hover:bg-amber-50",
+                    ].join(" ")}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 disabled:opacity-40"
+                className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next
               </button>
@@ -204,34 +267,34 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
         )}
       </main>
 
-      {/* Delete confirmation dialog */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="mb-2 text-lg font-semibold text-zinc-900">Delete Generation?</h2>
-            <p className="mb-6 text-sm text-zinc-500">
+      {/* Delete confirmation dialog — shadcn Dialog */}
+      <Dialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete Generation?</DialogTitle>
+            <DialogDescription>
               This will permanently delete the generation and all its platform outputs. This
               action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteId(null)}
-                disabled={isDeleting}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-40"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                disabled={isDeleting}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-40"
-              >
-                {isDeleting ? "Deleting…" : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setDeleteId(null)}
+              disabled={isDeleting}
+              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-40"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => deleteId && handleDelete(deleteId)}
+              disabled={isDeleting}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
