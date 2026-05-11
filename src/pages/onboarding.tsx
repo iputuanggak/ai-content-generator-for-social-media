@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { authClient } from "@/lib/auth-client";
+import { FormField } from "@/components/form-field";
 import type { GetServerSideProps } from "next";
 import { auth } from "@/lib/auth";
 
@@ -54,20 +55,15 @@ export default function OnboardingPage() {
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="teamName" className="text-sm font-medium text-foreground/80">
-              Team name
-            </label>
-            <input
-              id="teamName"
-              type="text"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              required
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-all focus:border-primary/50 focus:ring-2 focus:ring-ring/30"
-              placeholder="e.g. Acme Marketing"
-            />
-          </div>
+          <FormField
+            label="Team name"
+            id="teamName"
+            type="text"
+            value={teamName}
+            onChange={(e) => setTeamName(e.target.value)}
+            required
+            placeholder="e.g. Acme Marketing"
+          />
 
           {error && (
             <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
