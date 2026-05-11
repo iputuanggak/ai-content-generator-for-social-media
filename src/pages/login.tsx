@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { FormField } from "@/components/form-field";
+import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 
@@ -81,14 +82,16 @@ export default function LoginPage() {
             autoComplete="current-password"
             placeholder="Your password"
           >
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/2 -translate-y-1/2"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={16} />
-            </button>
+            </Button>
           </FormField>
 
           {error && (
@@ -97,13 +100,13 @@ export default function LoginPage() {
             </p>
           )}
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="mt-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="mt-2"
           >
             {loading ? "Signing in…" : "Sign in"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

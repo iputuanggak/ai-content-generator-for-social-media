@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { authClient } from "@/lib/auth-client";
 import { FormField } from "@/components/form-field";
+import { Button } from "@/components/ui/button";
 import type { GetServerSideProps } from "next";
 import { auth } from "@/lib/auth";
 
@@ -71,13 +72,13 @@ export default function OnboardingPage() {
             </p>
           )}
 
-          <button
+          <Button
             type="submit"
             disabled={loading || !teamName.trim()}
-            className="mt-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="mt-2"
           >
             {loading ? "Creating team…" : "Create team"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

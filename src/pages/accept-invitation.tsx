@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
 
 export default function AcceptInvitationPage() {
   const router = useRouter();
@@ -117,13 +118,13 @@ export default function AcceptInvitationPage() {
               <p className="mb-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>
             )}
 
-            <button
+            <Button
               onClick={handleAccept}
               disabled={status === "loading" || !invitationId}
-              className="w-full rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full"
             >
               {status === "loading" ? "Accepting…" : "Accept Invitation"}
-            </button>
+            </Button>
           </>
         )}
       </div>
