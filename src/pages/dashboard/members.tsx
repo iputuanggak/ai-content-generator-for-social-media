@@ -8,14 +8,7 @@ import { eq, and } from "drizzle-orm";
 import type { GetServerSideProps } from "next";
 import { requireAuthPage } from "@/lib/require-auth-page";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 interface MemberData {
   id: string;
@@ -201,37 +194,22 @@ export default function MembersPage({
         </section>
       </main>
 
-      {/* Remove confirmation dialog */}
-      <Dialog
+      <ConfirmDialog
         open={!!confirmRemoveMember}
         onOpenChange={(open) => { if (!open) setConfirmRemoveMember(null); }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Member</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove{" "}
-              <span className="font-medium text-stone-900">{confirmRemoveMember?.user.name}</span>{" "}
-              from the team? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <button
-              onClick={() => setConfirmRemoveMember(null)}
-              className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => confirmRemoveMember && handleRemove(confirmRemoveMember.id)}
-              disabled={!!removingId}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-            >
-              {removingId ? "Removing…" : "Remove"}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Remove Member"
+        description={
+          <>
+            Are you sure you want to remove{" "}
+            <span className="font-medium text-stone-900">{confirmRemoveMember?.user.name}</span>{" "}
+            from the team? This action cannot be undone.
+          </>
+        }
+        confirmLabel={removingId ? "Removing…" : "Remove"}
+        onConfirm={() => confirmRemoveMember && handleRemove(confirmRemoveMember.id)}
+        variant="destructive"
+        confirmDisabled={!!removingId}
+      />
     </DashboardLayout>
   );
 }

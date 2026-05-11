@@ -4,14 +4,7 @@ import { auth } from "@/lib/auth";
 import type { GetServerSideProps } from "next";
 import { requireAuthPage } from "@/lib/require-auth-page";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 interface Generation {
   id: string;
@@ -267,34 +260,16 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
         )}
       </main>
 
-      {/* Delete confirmation dialog — shadcn Dialog */}
-      <Dialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>Delete Generation?</DialogTitle>
-            <DialogDescription>
-              This will permanently delete the generation and all its platform outputs. This
-              action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <button
-              onClick={() => setDeleteId(null)}
-              disabled={isDeleting}
-              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-40"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => deleteId && handleDelete(deleteId)}
-              disabled={isDeleting}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
-            >
-              {isDeleting ? "Deleting…" : "Delete"}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => { if (!open) setDeleteId(null); }}
+        title="Delete Generation?"
+        description="This will permanently delete the generation and all its platform outputs. This action cannot be undone."
+        confirmLabel={isDeleting ? "Deleting…" : "Delete"}
+        onConfirm={() => deleteId && handleDelete(deleteId)}
+        variant="destructive"
+        confirmDisabled={isDeleting}
+      />
     </DashboardLayout>
   );
 }
