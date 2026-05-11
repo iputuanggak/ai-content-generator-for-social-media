@@ -9,6 +9,8 @@ import type { GetServerSideProps } from "next";
 import { requireAuthPage } from "@/lib/require-auth-page";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface MemberData {
   id: string;
@@ -135,21 +137,20 @@ export default function MembersPage({
           <section className="mb-8 rounded-xl border border-stone-200 bg-stone-50 p-6 shadow-sm">
             <h2 className="mb-4 text-base font-semibold text-stone-900">Invite a Member</h2>
             <form onSubmit={handleInvite} className="flex gap-3">
-              <input
+              <Input
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="Enter email address…"
                 required
-                className="flex-1 rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm text-stone-900 placeholder-stone-400 outline-none transition-colors focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                className="flex-1"
               />
-              <button
+              <Button
                 type="submit"
                 disabled={isInviting || !inviteEmail.trim()}
-                className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isInviting ? "Sending…" : "Send Invite"}
-              </button>
+              </Button>
             </form>
           </section>
         )}
@@ -179,13 +180,14 @@ export default function MembersPage({
 
                   {/* Remove button — admin only, can't remove self or owners */}
                   {isAdmin && m.userId !== currentUserId && m.role !== "owner" && (
-                    <button
+                    <Button
+                      variant="destructive"
+                      size="xs"
                       onClick={() => setConfirmRemoveMember(m)}
                       disabled={removingId === m.id}
-                      className="rounded-md border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-600 transition-colors hover:bg-red-50 hover:border-red-200 hover:text-red-700 disabled:opacity-50"
                     >
                       {removingId === m.id ? "Removing…" : "Remove"}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
