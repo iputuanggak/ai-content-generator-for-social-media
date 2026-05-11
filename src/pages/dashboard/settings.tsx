@@ -9,6 +9,11 @@ import type { Tone, Platform } from "@/lib/content-adapter";
 import { PLATFORM_OPTIONS } from "@/lib/platform-metadata";
 import { requireAuthPage } from "@/lib/require-auth-page";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const TONE_OPTIONS: { value: Tone; label: string }[] = [
   { value: "professional", label: "Professional" },
@@ -46,13 +51,6 @@ export default function SettingsPage({
   const [activePlatforms, setActivePlatforms] = useState<Platform[]>(initialActivePlatforms);
   const [modelId, setModelId] = useState(initialModelId);
   const [isSaving, setIsSaving] = useState(false);
-
-  function togglePlatform(platform: Platform) {
-    if (!isAdmin) return;
-    setActivePlatforms((prev) =>
-      prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
-    );
-  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -118,19 +116,14 @@ export default function SettingsPage({
               >
                 Brand Voice
               </label>
-              <textarea
+              <Textarea
                 id="brand-voice"
                 value={brandVoice}
                 onChange={(e) => setBrandVoice(e.target.value)}
                 readOnly={!isAdmin}
+                disabled={!isAdmin}
                 placeholder="Describe your brand's personality and tone (e.g. bold, friendly, expert)…"
                 rows={4}
-                className={[
-                  "w-full rounded-lg border px-4 py-3 text-sm outline-none transition-colors",
-                  isAdmin
-                    ? "border-stone-300 bg-white text-stone-900 placeholder-stone-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
-                    : "border-stone-200 bg-stone-100 text-stone-500 cursor-default",
-                ].join(" ")}
               />
             </div>
 
@@ -142,24 +135,22 @@ export default function SettingsPage({
               >
                 Default Tone
               </label>
-              <select
-                id="default-tone"
+              <Select
                 value={defaultTone}
-                onChange={(e) => setDefaultTone(e.target.value as Tone)}
+                onValueChange={(val) => setDefaultTone(val as Tone)}
                 disabled={!isAdmin}
-                className={[
-                  "rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors",
-                  isAdmin
-                    ? "border-stone-300 bg-white text-stone-900 focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
-                    : "border-stone-200 bg-stone-100 text-stone-500 cursor-default",
-                ].join(" ")}
               >
-                {TONE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TONE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Active Platforms */}
@@ -167,29 +158,26 @@ export default function SettingsPage({
               <p className={["mb-2 block text-sm font-medium", isAdmin ? "text-stone-700" : "text-stone-500"].join(" ")}>
                 Active Platforms
               </p>
-              <div className="flex flex-wrap gap-2">
-                {PLATFORM_OPTIONS.map(({ value, label }) => {
-                  const isActive = activePlatforms.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => togglePlatform(value)}
-                      disabled={!isAdmin}
-                      aria-pressed={isActive}
-                      className={[
-                        "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
-                        isActive
-                          ? "border-teal-600 bg-teal-600 text-white"
-                          : "border-stone-300 bg-white text-stone-600",
-                        !isAdmin ? "cursor-default opacity-60" : "hover:border-teal-500",
-                      ].join(" ")}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+              <ToggleGroup
+                type="multiple"
+                value={activePlatforms}
+                onValueChange={(vals) => {
+                  if (!isAdmin) return;
+                  setActivePlatforms(vals as Platform[]);
+                }}
+                className="flex flex-wrap gap-2"
+              >
+                {PLATFORM_OPTIONS.map(({ value, label }) => (
+                  <ToggleGroupItem
+                    key={value}
+                    value={value}
+                    disabled={!isAdmin}
+                    variant="outline"
+                  >
+                    {label}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             </div>
 
             {/* OpenRouter Model */}
@@ -200,31 +188,22 @@ export default function SettingsPage({
               >
                 OpenRouter Model
               </label>
-              <input
+              <Input
                 id="model-id"
                 type="text"
                 value={modelId}
                 onChange={(e) => setModelId(e.target.value)}
                 readOnly={!isAdmin}
+                disabled={!isAdmin}
                 placeholder="e.g. google/gemini-2.5-flash"
-                className={[
-                  "w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors",
-                  isAdmin
-                    ? "border-stone-300 bg-white text-stone-900 placeholder-stone-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
-                    : "border-stone-200 bg-stone-100 text-stone-500 cursor-default",
-                ].join(" ")}
               />
             </div>
 
             {/* Save button — only visible to admins */}
             {isAdmin && (
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="rounded-lg bg-teal-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
+              <Button type="submit" disabled={isSaving}>
                 {isSaving ? "Saving…" : "Save Settings"}
-              </button>
+              </Button>
             )}
           </form>
         </div>
