@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/router";
-import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { brandSettings, member } from "@/lib/db/schema";
@@ -9,6 +7,7 @@ import type { GetServerSideProps } from "next";
 import type { Tone, Platform } from "@/lib/content-adapter";
 import { PLATFORM_OPTIONS } from "@/lib/platform-metadata";
 import { requireAuthPage } from "@/lib/require-auth-page";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 const TONE_OPTIONS: { value: Tone; label: string }[] = [
   { value: "professional", label: "Professional" },
@@ -27,6 +26,7 @@ interface SettingsPageProps {
   defaultTone: Tone;
   activePlatforms: Platform[];
   modelId: string;
+  teams: { id: string; name: string }[];
 }
 
 export default function SettingsPage({
@@ -38,8 +38,8 @@ export default function SettingsPage({
   defaultTone: initialDefaultTone,
   activePlatforms: initialActivePlatforms,
   modelId: initialModelId,
+  teams,
 }: SettingsPageProps) {
-  const router = useRouter();
   const [brandVoice, setBrandVoice] = useState(initialBrandVoice);
   const [defaultTone, setDefaultTone] = useState<Tone>(initialDefaultTone);
   const [activePlatforms, setActivePlatforms] = useState<Platform[]>(initialActivePlatforms);
@@ -85,28 +85,15 @@ export default function SettingsPage({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      {/* Header */}
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold text-zinc-900">ContentGen</span>
-            <span className="text-zinc-300">/</span>
-            <span className="text-sm font-medium text-zinc-600">{teamName}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-500">{userName}</span>
-          </div>
-        </div>
-      </header>
-
+    <DashboardLayout
+      userName={userName}
+      teamName={teamName}
+      teamId={teamId}
+      teams={teams}
+    >
       <main className="mx-auto max-w-2xl px-6 py-12">
         {/* Nav breadcrumb */}
         <div className="mb-8 flex items-center gap-2 text-sm text-zinc-500">
-          <Link href="/dashboard" className="hover:text-zinc-900">
-            Dashboard
-          </Link>
-          <span>/</span>
           <span className="text-zinc-900">Brand Settings</span>
         </div>
 
@@ -246,11 +233,11 @@ export default function SettingsPage({
           )}
         </form>
       </main>
-    </div>
+    </DashboardLayout>
   );
 }
 
-export const getServerSideProps: GetServerSideProps<SettingsPageProps> = requireAuthPage(
+export const getServerSideProps = requireAuthPage(
   async ({ authHeaders, session }) => {
     let activeOrgId = session.session.activeOrganizationId;
 
@@ -304,6 +291,9 @@ export const getServerSideProps: GetServerSideProps<SettingsPageProps> = require
 
     const settings = settingsRows[0];
 
+    const allOrgs = await auth.api.listOrganizations({ headers: authHeaders });
+    const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
+
     return {
       props: {
         userName: session.user.name,
@@ -314,6 +304,7 @@ export const getServerSideProps: GetServerSideProps<SettingsPageProps> = require
         defaultTone: settings.defaultTone as Tone,
         activePlatforms: settings.activePlatforms as Platform[],
         modelId: settings.modelId,
+        teams,
       },
     };
   }

@@ -1,13 +1,12 @@
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { member, user } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { authClient } from "@/lib/auth-client";
 import type { GetServerSideProps } from "next";
 import { requireAuthPage } from "@/lib/require-auth-page";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 interface MemberData {
   id: string;
@@ -40,7 +39,6 @@ export default function MembersPage({
   members: initialMembers,
   teams,
 }: MembersPageProps) {
-  const router = useRouter();
   const [members, setMembers] = useState<MemberData[]>(initialMembers);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
@@ -48,7 +46,6 @@ export default function MembersPage({
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
-  const [switchingTeam, setSwitchingTeam] = useState(false);
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -97,22 +94,6 @@ export default function MembersPage({
     }
   }
 
-  async function handleSwitchTeam(newTeamId: string) {
-    if (newTeamId === teamId) return;
-    setSwitchingTeam(true);
-    try {
-      await authClient.organization.setActive({ organizationId: newTeamId });
-      router.push("/dashboard/members");
-    } catch {
-      setSwitchingTeam(false);
-    }
-  }
-
-  async function handleLogout() {
-    await authClient.signOut();
-    router.push("/login");
-  }
-
   const ROLE_LABELS: Record<string, string> = {
     owner: "Owner",
     admin: "Admin",
@@ -120,46 +101,12 @@ export default function MembersPage({
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      {/* Header */}
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold text-zinc-900">ContentGen</span>
-            {teams.length > 1 ? (
-              <>
-                <span className="text-zinc-300">/</span>
-                <select
-                  value={teamId}
-                  onChange={(e) => handleSwitchTeam(e.target.value)}
-                  disabled={switchingTeam}
-                  className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-600 outline-none focus:border-zinc-400"
-                >
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : (
-              <>
-                <span className="text-zinc-300">/</span>
-                <span className="text-sm font-medium text-zinc-600">{teamName}</span>
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-500">{userName}</span>
-            <button
-              onClick={handleLogout}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </header>
+    <DashboardLayout
+      userName={userName}
+      teamName={teamName}
+      teamId={teamId}
+      teams={teams}
+    >
 
       <main className="mx-auto max-w-3xl px-6 py-12">
         {/* Breadcrumb */}
@@ -276,11 +223,11 @@ export default function MembersPage({
           </div>
         </section>
       </main>
-    </div>
+    </DashboardLayout>
   );
 }
 
-export const getServerSideProps: GetServerSideProps<MembersPageProps> = requireAuthPage(
+export const getServerSideProps = requireAuthPage(
   async ({ authHeaders, session }) => {
     let activeOrgId = session.session.activeOrganizationId;
 

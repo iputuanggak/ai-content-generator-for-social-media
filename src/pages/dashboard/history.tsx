@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { auth } from "@/lib/auth";
 import type { GetServerSideProps } from "next";
-import { authClient } from "@/lib/auth-client";
 import { requireAuthPage } from "@/lib/require-auth-page";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 interface Generation {
   id: string;
@@ -17,6 +16,8 @@ interface Generation {
 interface HistoryPageProps {
   userName: string;
   teamName: string | null;
+  teamId: string | null;
+  teams: { id: string; name: string }[];
 }
 
 const PAGE_SIZE = 20;
@@ -30,8 +31,7 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export default function HistoryPage({ userName, teamName }: HistoryPageProps) {
-  const router = useRouter();
+export default function HistoryPage({ userName, teamName, teamId, teams }: HistoryPageProps) {
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -87,51 +87,15 @@ export default function HistoryPage({ userName, teamName }: HistoryPageProps) {
     }
   }
 
-  async function handleLogout() {
-    await authClient.signOut();
-    router.push("/login");
-  }
-
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      {/* Header */}
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold text-zinc-900">ContentGen</span>
-            {teamName && (
-              <>
-                <span className="text-zinc-300">/</span>
-                <span className="text-sm font-medium text-zinc-600">{teamName}</span>
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="text-sm font-medium text-zinc-600 hover:text-zinc-900"
-            >
-              Generate
-            </Link>
-            <Link
-              href="/dashboard/history"
-              className="text-sm font-medium text-zinc-900 underline underline-offset-2"
-            >
-              History
-            </Link>
-            <span className="text-sm text-zinc-500">{userName}</span>
-            <button
-              onClick={handleLogout}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </header>
-
+    <DashboardLayout
+      userName={userName}
+      teamName={teamName}
+      teamId={teamId}
+      teams={teams}
+    >
       <main className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="mb-6 text-2xl font-semibold text-zinc-900">Generation History</h1>
 
@@ -268,14 +232,14 @@ export default function HistoryPage({ userName, teamName }: HistoryPageProps) {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 }
 
 export const getServerSideProps: GetServerSideProps<HistoryPageProps> = requireAuthPage(
   async ({ authHeaders, session }) => {
     let teamName: string | null = null;
-    const activeOrgId = session.session.activeOrganizationId;
+    let activeOrgId = session.session.activeOrganizationId;
 
     if (activeOrgId) {
       const org = await auth.api.getFullOrganization({
@@ -287,13 +251,21 @@ export const getServerSideProps: GetServerSideProps<HistoryPageProps> = requireA
 
     if (!teamName) {
       const orgs = await auth.api.listOrganizations({ headers: authHeaders });
-      if (orgs?.length) teamName = orgs[0].name;
+      if (orgs?.length) {
+        teamName = orgs[0].name;
+        activeOrgId = orgs[0].id;
+      }
     }
+
+    const allOrgs = await auth.api.listOrganizations({ headers: authHeaders });
+    const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
 
     return {
       props: {
         userName: session.user.name,
         teamName,
+        teamId: activeOrgId ?? null,
+        teams,
       },
     };
   }

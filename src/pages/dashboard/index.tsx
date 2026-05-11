@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState, useRef, useCallback } from "react";
 import { authClient } from "@/lib/auth-client";
 import { auth } from "@/lib/auth";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { db } from "@/lib/db";
 import { brandSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -289,59 +290,12 @@ export default function DashboardPage({
   const showResultsArea = isGenerating || hasResults;
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      {/* Header / nav */}
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold text-zinc-900">ContentGen</span>
-            {teamName && teams.length > 1 ? (
-              <>
-                <span className="text-zinc-300">/</span>
-                <select
-                  value={teamId ?? ""}
-                  onChange={(e) => handleSwitchTeam(e.target.value)}
-                  className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-600 outline-none focus:border-zinc-400"
-                >
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : teamName ? (
-              <>
-                <span className="text-zinc-300">/</span>
-                <span className="text-sm font-medium text-zinc-600">{teamName}</span>
-              </>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-500">{userName}</span>
-            <Link
-              href="/dashboard/members"
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
-            >
-              Members
-            </Link>
-            <Link
-              href="/dashboard/settings"
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
-            >
-              Settings
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
+    <DashboardLayout
+      userName={userName}
+      teamName={teamName}
+      teamId={teamId}
+      teams={teams}
+    >
       <main className="mx-auto max-w-5xl px-6 py-12">
         {!teamName ? (
           <div>
@@ -526,7 +480,7 @@ export default function DashboardPage({
           </div>
         )}
       </main>
-    </div>
+    </DashboardLayout>
   );
 }
 

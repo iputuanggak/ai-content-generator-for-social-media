@@ -1,14 +1,13 @@
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { generation, platformOutput } from "@/lib/db/schema";
 import type { GetServerSideProps } from "next";
-import { authClient } from "@/lib/auth-client";
 import { PLATFORM_LABELS } from "@/lib/platform-metadata";
 import { requireAuthPage } from "@/lib/require-auth-page";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 interface PlatformOutputData {
   id: string;
@@ -28,6 +27,8 @@ interface GenerationData {
 interface HistoryDetailPageProps {
   userName: string;
   teamName: string | null;
+  teamId: string | null;
+  teams: { id: string; name: string }[];
   generation: GenerationData;
   platformOutputs: PlatformOutputData[];
 }
@@ -47,11 +48,11 @@ function capitalize(s: string) {
 export default function HistoryDetailPage({
   userName,
   teamName,
+  teamId,
+  teams,
   generation: gen,
   platformOutputs,
 }: HistoryDetailPageProps) {
-  const router = useRouter();
-
   const [intendedPublishAt, setIntendedPublishAt] = useState(
     gen.intendedPublishAt
       ? new Date(gen.intendedPublishAt).toISOString().slice(0, 16)
@@ -73,11 +74,6 @@ export default function HistoryDetailPage({
     }
     return init;
   });
-
-  async function handleLogout() {
-    await authClient.signOut();
-    router.push("/login");
-  }
 
   async function handlePublishDateChange(value: string) {
     setIntendedPublishAt(value);
@@ -196,43 +192,12 @@ export default function HistoryDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      {/* Header */}
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold text-zinc-900">ContentGen</span>
-            {teamName && (
-              <>
-                <span className="text-zinc-300">/</span>
-                <span className="text-sm font-medium text-zinc-600">{teamName}</span>
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="text-sm font-medium text-zinc-600 hover:text-zinc-900"
-            >
-              Generate
-            </Link>
-            <Link
-              href="/dashboard/history"
-              className="text-sm font-medium text-zinc-600 hover:text-zinc-900"
-            >
-              History
-            </Link>
-            <span className="text-sm text-zinc-500">{userName}</span>
-            <button
-              onClick={handleLogout}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </header>
-
+    <DashboardLayout
+      userName={userName}
+      teamName={teamName}
+      teamId={teamId}
+      teams={teams}
+    >
       <main className="mx-auto max-w-5xl px-6 py-12">
         {/* Back link */}
         <Link
@@ -284,7 +249,7 @@ export default function HistoryDetailPage({
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-zinc-900">
-                      {PLATFORM_LABELS[po.platform] ?? po.platform}
+                      {PLATFORM_LABELS[po.platform as keyof typeof PLATFORM_LABELS] ?? po.platform}
                     </span>
                     {hasUnsavedChanges && (
                       <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
@@ -335,11 +300,11 @@ export default function HistoryDetailPage({
           })}
         </div>
       </main>
-    </div>
+    </DashboardLayout>
   );
 }
 
-export const getServerSideProps: GetServerSideProps<HistoryDetailPageProps> = requireAuthPage(
+export const getServerSideProps = requireAuthPage(
   async ({ authHeaders, session, params }) => {
     const id = params?.id;
     if (!id || typeof id !== "string") {
@@ -371,10 +336,15 @@ export const getServerSideProps: GetServerSideProps<HistoryDetailPageProps> = re
     });
     if (org?.name) teamName = org.name;
 
+    const allOrgs = await auth.api.listOrganizations({ headers: authHeaders });
+    const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
+
     return {
       props: {
         userName: session.user.name,
         teamName,
+        teamId: activeOrgId,
+        teams,
         generation: {
           id: gen.id,
           topic: gen.topic,
