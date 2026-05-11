@@ -4,6 +4,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { Sidebar } from "./Sidebar";
 
 interface MobileDrawerProps {
@@ -22,9 +23,10 @@ export function MobileDrawer({ userName, teamName, teamId, teams }: MobileDrawer
       <div className="flex items-center gap-3">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <button
+            <Button
+              variant="ghost"
+              size="icon-sm"
               aria-label="Open navigation"
-              className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
             >
               <svg
                 className="h-5 w-5"
@@ -35,7 +37,7 @@ export function MobileDrawer({ userName, teamName, teamId, teams }: MobileDrawer
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-            </button>
+            </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-64">
             <Sidebar

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,12 +111,13 @@ export function Sidebar({ userName, teamName, teamId, teams, onNavigate }: Sideb
       {/* User + logout */}
       <div className="border-t border-zinc-100 px-5 py-4">
         <div className="mb-2 text-sm font-medium text-zinc-900 truncate">{userName}</div>
-        <button
+        <Button
+          variant="ghost"
           onClick={handleLogout}
-          className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+          className="text-sm text-zinc-500 hover:text-zinc-900"
         >
           Log out
-        </button>
+        </Button>
       </div>
     </div>
   );
