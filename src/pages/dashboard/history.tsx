@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { auth } from "@/lib/auth";
-import type { GetServerSideProps } from "next";
-import { requireAuthPage } from "@/lib/require-auth-page";
+import { useTeam } from "@/lib/team-context";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ContentSkeleton } from "@/components/content-skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/date-picker";
@@ -24,13 +23,6 @@ interface Generation {
   tone: string;
   intendedPublishAt: string | null;
   createdAt: string;
-}
-
-interface HistoryPageProps {
-  userName: string;
-  teamName: string | null;
-  teamId: string | null;
-  teams: { id: string; name: string }[];
 }
 
 const PAGE_SIZE = 20;
@@ -61,7 +53,8 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export default function HistoryPage({ userName, teamName, teamId, teams }: HistoryPageProps) {
+export default function HistoryPage() {
+  useTeam();
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -157,11 +150,7 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
 
         {/* List */}
         {isLoading ? (
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl bg-amber-50" />
-            ))}
-          </div>
+          <ContentSkeleton lines={5} />
         ) : generations.length === 0 ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-6 py-12 text-center">
             <p className="text-lg font-medium text-amber-800">No generations found</p>
@@ -279,37 +268,3 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
   );
 }
 
-export const getServerSideProps: GetServerSideProps<HistoryPageProps> = requireAuthPage(
-  async ({ authHeaders, session }) => {
-    let teamName: string | null = null;
-    let activeOrgId = session.session.activeOrganizationId;
-
-    if (activeOrgId) {
-      const org = await auth.api.getFullOrganization({
-        headers: authHeaders,
-        query: { organizationId: activeOrgId },
-      });
-      if (org?.name) teamName = org.name;
-    }
-
-    if (!teamName) {
-      const orgs = await auth.api.listOrganizations({ headers: authHeaders });
-      if (orgs?.length) {
-        teamName = orgs[0].name;
-        activeOrgId = orgs[0].id;
-      }
-    }
-
-    const allOrgs = await auth.api.listOrganizations({ headers: authHeaders });
-    const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
-
-    return {
-      props: {
-        userName: session.user.name,
-        teamName,
-        teamId: activeOrgId ?? null,
-        teams,
-      },
-    };
-  }
-);

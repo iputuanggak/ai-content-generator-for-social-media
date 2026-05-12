@@ -5,6 +5,18 @@ import { render, screen, cleanup, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 
+const mockTeamContext = {
+  userName: "Test User",
+  teamName: "Test Team",
+  teamId: "team-1",
+  teams: [{ id: "team-1", name: "Test Team" }],
+  loading: false,
+};
+
+vi.mock("@/lib/team-context", () => ({
+  useTeam: () => mockTeamContext,
+}));
+
 vi.mock("@/components/layout/DashboardLayout", () => ({
   DashboardLayout: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="layout">{children}</div>
@@ -41,28 +53,43 @@ global.fetch = mockFetch;
 
 import HistoryPage from "../dashboard/history";
 
-const defaultProps = {
-  userName: "Test User",
-  teamName: "Test Team",
-  teamId: "team-1",
-  teams: [{ id: "team-1", name: "Test Team" }],
-};
-
-describe("HistoryPage shadcn components", () => {
+describe("HistoryPage CSR conversion", () => {
   afterEach(() => {
     cleanup();
     mockFetch.mockClear();
   });
 
+  it("renders without props (uses useTeam context)", async () => {
+    render(<HistoryPage />);
+    await screen.findByText("Summer sale campaign");
+    expect(screen.getByText("Generation History")).toBeInTheDocument();
+  });
+
+  it("shows ContentSkeleton while generations load", () => {
+    let resolveFetch: (value: unknown) => void;
+    mockFetch.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFetch = resolve;
+        })
+    );
+    const { container } = render(<HistoryPage />);
+    expect(container.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
+    resolveFetch!({
+      ok: true,
+      json: () => Promise.resolve({ items: [], total: 0 }),
+    });
+  });
+
   it("uses shadcn Input for search topic", async () => {
-    render(<HistoryPage {...defaultProps} />);
+    render(<HistoryPage />);
     await screen.findByText("Summer sale campaign");
     const input = screen.getByPlaceholderText(/summer sale/i);
     expect(input).toHaveAttribute("data-slot", "input");
   });
 
   it("uses DatePicker for From date filter", async () => {
-    render(<HistoryPage {...defaultProps} />);
+    render(<HistoryPage />);
     await screen.findByText("Summer sale campaign");
     const fromLabel = screen.getByText("From");
     const fromContainer = fromLabel.parentElement!;
@@ -71,7 +98,7 @@ describe("HistoryPage shadcn components", () => {
   });
 
   it("uses DatePicker for To date filter", async () => {
-    render(<HistoryPage {...defaultProps} />);
+    render(<HistoryPage />);
     await screen.findByText("Summer sale campaign");
     const toLabel = screen.getByText("To");
     const toContainer = toLabel.parentElement!;
@@ -80,7 +107,7 @@ describe("HistoryPage shadcn components", () => {
   });
 
   it("uses shadcn Button with destructive variant for delete", async () => {
-    render(<HistoryPage {...defaultProps} />);
+    render(<HistoryPage />);
     await screen.findByText("Summer sale campaign");
     const deleteButtons = screen.getAllByRole("button", { name: /delete/i }).filter(
       (btn) => btn.getAttribute("data-slot") === "button"
@@ -91,7 +118,7 @@ describe("HistoryPage shadcn components", () => {
   });
 
   it("uses shadcn Pagination components for page navigation", async () => {
-    const { container } = render(<HistoryPage {...defaultProps} />);
+    const { container } = render(<HistoryPage />);
     await screen.findByText("Summer sale campaign");
     expect(container.querySelector('[data-slot="pagination"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="pagination-content"]')).toBeInTheDocument();
@@ -99,7 +126,7 @@ describe("HistoryPage shadcn components", () => {
   });
 
   it("uses shadcn PaginationLink with active page highlighting", async () => {
-    const { container } = render(<HistoryPage {...defaultProps} />);
+    const { container } = render(<HistoryPage />);
     await screen.findByText("Summer sale campaign");
     const activeLink = container.querySelector('[data-active="true"]');
     expect(activeLink).toBeInTheDocument();
@@ -108,7 +135,7 @@ describe("HistoryPage shadcn components", () => {
 
   it("uses ConfirmDialog for delete confirmation", async () => {
     const user = userEvent.setup();
-    render(<HistoryPage {...defaultProps} />);
+    render(<HistoryPage />);
     await screen.findByText("Summer sale campaign");
     const deleteButtons = screen.getAllByRole("button", { name: /delete/i }).filter(
       (btn) => btn.getAttribute("data-slot") === "button"
@@ -120,7 +147,7 @@ describe("HistoryPage shadcn components", () => {
 
   it("search input still filters correctly", async () => {
     const user = userEvent.setup();
-    render(<HistoryPage {...defaultProps} />);
+    render(<HistoryPage />);
     await screen.findByText("Summer sale campaign");
     const input = screen.getByPlaceholderText(/summer sale/i);
     await user.type(input, "test");
@@ -129,7 +156,7 @@ describe("HistoryPage shadcn components", () => {
   });
 
   it("pagination renders Previous and Next links", async () => {
-    const { container } = render(<HistoryPage {...defaultProps} />);
+    const { container } = render(<HistoryPage />);
     await screen.findByText("Summer sale campaign");
     const prevLink = container.querySelector('[aria-label="Go to previous page"]');
     const nextLink = container.querySelector('[aria-label="Go to next page"]');
