@@ -120,12 +120,7 @@ export default function HistoryPage({ userName, teamName, teamId, teams }: Histo
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <DashboardLayout
-      userName={userName}
-      teamName={teamName}
-      teamId={teamId}
-      teams={teams}
-    >
+    <DashboardLayout>
       <main className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="mb-6 text-2xl font-semibold text-zinc-900">Generation History</h1>
 

@@ -79,12 +79,7 @@ export default function SettingsPage({
   }
 
   return (
-    <DashboardLayout
-      userName={userName}
-      teamName={teamName}
-      teamId={teamId}
-      teams={teams}
-    >
+    <DashboardLayout>
       <main className="mx-auto max-w-2xl px-6 py-12">
         {/* Nav breadcrumb */}
         <div className="mb-8 flex items-center gap-2 text-sm text-stone-500">

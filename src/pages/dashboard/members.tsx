@@ -104,12 +104,7 @@ export default function MembersPage({
   };
 
   return (
-    <DashboardLayout
-      userName={userName}
-      teamName={teamName}
-      teamId={teamId}
-      teams={teams}
-    >
+    <DashboardLayout>
       <main className="mx-auto max-w-3xl px-6 py-12">
         {/* Breadcrumb */}
         <div className="mb-8 flex items-center gap-2 text-sm text-stone-500">

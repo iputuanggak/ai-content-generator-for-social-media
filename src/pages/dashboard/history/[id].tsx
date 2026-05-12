@@ -183,12 +183,7 @@ export default function HistoryDetailPage({
   }
 
   return (
-    <DashboardLayout
-      userName={userName}
-      teamName={teamName}
-      teamId={teamId}
-      teams={teams}
-    >
+    <DashboardLayout>
       <main className="mx-auto max-w-5xl px-6 py-12">
         {/* Back link */}
         <Link

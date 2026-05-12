@@ -1,16 +1,9 @@
-import { useRouter } from "next/router";
 import Link from "next/link";
-import { useState } from "react";
-import { authClient } from "@/lib/auth-client";
-import { auth } from "@/lib/auth";
+import { useState, useEffect, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { db } from "@/lib/db";
-import { brandSettings } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import type { GetServerSideProps } from "next";
+import { useTeam } from "@/lib/team-context";
 import type { Tone, Platform } from "@/lib/content-adapter";
 import { PLATFORM_LABELS } from "@/lib/platform-metadata";
-import { requireAuthPage } from "@/lib/require-auth-page";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -23,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { PlatformOutputCard } from "@/components/platform-output-card";
+import { ContentSkeleton } from "@/components/content-skeleton";
 
 interface PlatformOutputState {
   platformOutputId: string;
@@ -33,14 +27,22 @@ interface PlatformOutputState {
   isRegenerating: boolean;
 }
 
-interface DashboardProps {
-  userName: string;
-  teamName: string | null;
-  teamId: string | null;
+interface BrandSettingsData {
   defaultTone: Tone;
   activePlatforms: Platform[];
-  teams: { id: string; name: string }[];
 }
+
+const DEFAULT_TONE: Tone = "professional";
+const DEFAULT_PLATFORMS: Platform[] = [
+  "twitter",
+  "linkedin",
+  "instagram",
+  "facebook",
+  "tiktok",
+  "youtube",
+  "threads",
+  "pinterest",
+];
 
 const TONE_OPTIONS: { value: Tone; label: string }[] = [
   { value: "professional", label: "Professional" },
@@ -49,17 +51,16 @@ const TONE_OPTIONS: { value: Tone; label: string }[] = [
   { value: "inspirational", label: "Inspirational" },
 ];
 
-export default function DashboardPage({
-  userName,
-  teamName,
-  teamId,
-  defaultTone,
-  activePlatforms,
-  teams,
-}: DashboardProps) {
-  const router = useRouter();
+export default function DashboardPage() {
+  const { userName, teamName, teamId, loading: teamLoading } = useTeam();
+
+  const [brandSettingsLoaded, setBrandSettingsLoaded] = useState(false);
+  const [defaultTone, setDefaultTone] = useState<Tone>(DEFAULT_TONE);
+  const [activePlatforms, setActivePlatforms] = useState<Platform[]>(DEFAULT_PLATFORMS);
+
   const [topic, setTopic] = useState("");
-  const [tone, setTone] = useState<Tone>(defaultTone);
+  const toneDetermined = useRef(false);
+  const [tone, setTone] = useState<Tone>(DEFAULT_TONE);
   const [isGenerating, setIsGenerating] = useState(false);
   const [outputs, setOutputs] = useState<Record<string, PlatformOutputState>>({});
   const [loadingPlatforms, setLoadingPlatforms] = useState<Set<string>>(new Set());
@@ -68,16 +69,38 @@ export default function DashboardPage({
   const [intendedPublishAt, setIntendedPublishAt] = useState<Date | undefined>(undefined);
   const [isSavingPublishDate, setIsSavingPublishDate] = useState(false);
 
-  async function handleLogout() {
-    await authClient.signOut();
-    router.push("/login");
-  }
+  const brandSettingsLoading = !brandSettingsLoaded && (teamLoading || !!teamId);
 
-  async function handleSwitchTeam(newTeamId: string) {
-    if (newTeamId === teamId) return;
-    await authClient.organization.setActive({ organizationId: newTeamId });
-    router.push("/dashboard");
-  }
+  useEffect(() => {
+    if (defaultTone && !toneDetermined.current) {
+      toneDetermined.current = true;
+      setTone(defaultTone);
+    }
+  }, [defaultTone]);
+
+  useEffect(() => {
+    if (!teamId || teamLoading) return;
+    let cancelled = false;
+    fetch(`/api/teams/${teamId}/brand-settings`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed");
+        return res.json();
+      })
+      .then((data: BrandSettingsData) => {
+        if (cancelled) return;
+        setDefaultTone(data.defaultTone ?? DEFAULT_TONE);
+        setActivePlatforms(data.activePlatforms ?? DEFAULT_PLATFORMS);
+      })
+      .catch(() => {
+        if (cancelled) return;
+      })
+      .finally(() => {
+        if (!cancelled) setBrandSettingsLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [teamId, teamLoading]);
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
@@ -293,14 +316,16 @@ export default function DashboardPage({
   const showResultsArea = isGenerating || hasResults;
 
   return (
-    <DashboardLayout
-      userName={userName}
-      teamName={teamName}
-      teamId={teamId}
-      teams={teams}
-    >
+    <DashboardLayout>
       <main className="mx-auto max-w-5xl px-6 py-12">
-        {!teamName ? (
+        {teamLoading || brandSettingsLoading ? (
+          <div className="space-y-6">
+            <ContentSkeleton lines={2} />
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/40 p-6">
+              <ContentSkeleton lines={4} />
+            </div>
+          </div>
+        ) : !teamName ? (
           <div>
             <h1 className="mb-2 text-2xl font-semibold text-zinc-900">Welcome, {userName}!</h1>
             <p className="text-zinc-500">
@@ -433,75 +458,3 @@ export default function DashboardPage({
     </DashboardLayout>
   );
 }
-
-export const getServerSideProps: GetServerSideProps<DashboardProps> = requireAuthPage(
-  async ({ authHeaders, session }) => {
-    // Fetch the active organization name if there is one
-    let teamName: string | null = null;
-    let activeOrgId = session.session.activeOrganizationId;
-
-    if (activeOrgId) {
-      const orgsResponse = await auth.api.getFullOrganization({
-        headers: authHeaders,
-        query: { organizationId: activeOrgId },
-      });
-      if (orgsResponse && orgsResponse.name) {
-        teamName = orgsResponse.name;
-      }
-    }
-
-    // If no active org, try to get first org the user belongs to
-    if (!teamName) {
-      const listResponse = await auth.api.listOrganizations({ headers: authHeaders });
-      if (listResponse && listResponse.length > 0) {
-        teamName = listResponse[0].name;
-        activeOrgId = listResponse[0].id;
-        await auth.api.setActiveOrganization({
-          headers: authHeaders,
-          body: { organizationId: listResponse[0].id },
-        });
-      }
-    }
-
-    // List all orgs for the team switcher
-    const allOrgs = await auth.api.listOrganizations({ headers: authHeaders });
-    const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
-
-    // Read Brand Settings for default tone and active platforms
-    let defaultTone: Tone = "professional";
-    let activePlatforms: Platform[] = [
-      "twitter",
-      "linkedin",
-      "instagram",
-      "facebook",
-      "tiktok",
-      "youtube",
-      "threads",
-      "pinterest",
-    ];
-
-    if (activeOrgId) {
-      const settingsRows = await db
-        .select()
-        .from(brandSettings)
-        .where(eq(brandSettings.organizationId, activeOrgId))
-        .limit(1);
-
-      if (settingsRows.length > 0) {
-        defaultTone = settingsRows[0].defaultTone as Tone;
-        activePlatforms = settingsRows[0].activePlatforms as Platform[];
-      }
-    }
-
-    return {
-      props: {
-        userName: session.user.name,
-        teamName,
-        teamId: activeOrgId ?? null,
-        defaultTone,
-        activePlatforms,
-        teams,
-      },
-    };
-  }
-);

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { authClient } from "@/lib/auth-client";
+import { useTeam } from "@/lib/team-context";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,10 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface SidebarProps {
-  userName: string;
-  teamName: string | null;
-  teamId: string | null;
-  teams: { id: string; name: string }[];
   onNavigate?: () => void;
 }
 
@@ -24,8 +21,9 @@ const NAV_LINKS = [
   { label: "Settings", href: "/dashboard/settings" },
 ];
 
-export function Sidebar({ userName, teamName, teamId, teams, onNavigate }: SidebarProps) {
+export function Sidebar({ onNavigate }: SidebarProps) {
   const router = useRouter();
+  const { userName, teamName, teamId, teams } = useTeam();
 
   async function handleLogout() {
     await authClient.signOut();
@@ -47,12 +45,10 @@ export function Sidebar({ userName, teamName, teamId, teams, onNavigate }: Sideb
 
   return (
     <div className="flex h-full flex-col bg-white border-r border-zinc-200">
-      {/* Logo */}
       <div className="px-5 py-5 border-b border-zinc-100">
         <span className="text-lg font-semibold text-zinc-900">ContentGen</span>
       </div>
 
-      {/* Team switcher */}
       <div className="px-5 py-4 border-b border-zinc-100">
         {teamName && teams.length > 1 ? (
           <DropdownMenu>
@@ -89,7 +85,6 @@ export function Sidebar({ userName, teamName, teamId, teams, onNavigate }: Sideb
         )}
       </div>
 
-      {/* Nav links */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {NAV_LINKS.map(({ label, href }) => (
           <Link
@@ -108,7 +103,6 @@ export function Sidebar({ userName, teamName, teamId, teams, onNavigate }: Sideb
         ))}
       </nav>
 
-      {/* User + logout */}
       <div className="border-t border-zinc-100 px-5 py-4">
         <div className="mb-2 text-sm font-medium text-zinc-900 truncate">{userName}</div>
         <Button

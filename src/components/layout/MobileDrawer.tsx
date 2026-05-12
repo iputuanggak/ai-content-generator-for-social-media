@@ -6,20 +6,22 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "./Sidebar";
+import { useTeam } from "@/lib/team-context";
 
-interface MobileDrawerProps {
-  userName: string;
-  teamName: string | null;
-  teamId: string | null;
-  teams: { id: string; name: string }[];
-}
-
-export function MobileDrawer({ userName, teamName, teamId, teams }: MobileDrawerProps) {
+export function MobileDrawer() {
   const [open, setOpen] = useState(false);
+  const { loading } = useTeam();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 md:hidden">
+        <span className="text-base font-semibold text-zinc-900">ContentGen</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 md:hidden">
-      {/* Hamburger + logo */}
       <div className="flex items-center gap-3">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
@@ -40,13 +42,7 @@ export function MobileDrawer({ userName, teamName, teamId, teams }: MobileDrawer
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-64">
-            <Sidebar
-              userName={userName}
-              teamName={teamName}
-              teamId={teamId}
-              teams={teams}
-              onNavigate={() => setOpen(false)}
-            />
+            <Sidebar onNavigate={() => setOpen(false)} />
           </SheetContent>
         </Sheet>
         <span className="text-base font-semibold text-zinc-900">ContentGen</span>
