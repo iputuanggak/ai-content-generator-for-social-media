@@ -3,8 +3,23 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MobileDrawer } from "../layout/MobileDrawer";
 import { TeamProvider } from "@/lib/team-context";
+
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+}
+
+function wrap(children: React.ReactNode) {
+  return (
+    <QueryClientProvider client={createTestQueryClient()}>
+      {children}
+    </QueryClientProvider>
+  );
+}
 
 afterEach(cleanup);
 
@@ -46,9 +61,11 @@ describe("MobileDrawer", () => {
     });
 
     render(
-      <TeamProvider>
-        <MobileDrawer />
-      </TeamProvider>
+      wrap(
+        <TeamProvider>
+          <MobileDrawer />
+        </TeamProvider>
+      )
     );
 
     const trigger = await screen.findByRole("button", { name: /open navigation/i });
@@ -63,9 +80,11 @@ describe("MobileDrawer", () => {
     });
 
     render(
-      <TeamProvider>
-        <MobileDrawer />
-      </TeamProvider>
+      wrap(
+        <TeamProvider>
+          <MobileDrawer />
+        </TeamProvider>
+      )
     );
 
     await screen.findByRole("button", { name: /open navigation/i }, { timeout: 3000 });

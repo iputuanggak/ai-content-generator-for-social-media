@@ -4,8 +4,23 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Sidebar } from "../layout/Sidebar";
 import { TeamProvider } from "@/lib/team-context";
+
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+}
+
+function wrap(children: React.ReactNode) {
+  return (
+    <QueryClientProvider client={createTestQueryClient()}>
+      {children}
+    </QueryClientProvider>
+  );
+}
 
 afterEach(cleanup);
 
@@ -47,9 +62,11 @@ describe("Sidebar", () => {
     });
 
     render(
-      <TeamProvider>
-        <Sidebar />
-      </TeamProvider>
+      wrap(
+        <TeamProvider>
+          <Sidebar />
+        </TeamProvider>
+      )
     );
 
     const logoutBtn = await screen.findByRole("button", { name: /log out/i });
@@ -64,9 +81,11 @@ describe("Sidebar", () => {
     });
 
     render(
-      <TeamProvider>
-        <Sidebar />
-      </TeamProvider>
+      wrap(
+        <TeamProvider>
+          <Sidebar />
+        </TeamProvider>
+      )
     );
 
     expect(await screen.findByText("Test User")).toBeInTheDocument();
@@ -82,9 +101,11 @@ describe("Sidebar", () => {
     });
 
     render(
-      <TeamProvider>
-        <Sidebar />
-      </TeamProvider>
+      wrap(
+        <TeamProvider>
+          <Sidebar />
+        </TeamProvider>
+      )
     );
 
     const logoutBtn = await screen.findByRole("button", { name: /log out/i });

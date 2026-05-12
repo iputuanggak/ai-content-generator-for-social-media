@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
 import { useTeam } from "@/lib/team-context";
 import { Button } from "@/components/ui/button";
@@ -24,15 +25,24 @@ const NAV_LINKS = [
 export function Sidebar({ onNavigate }: SidebarProps) {
   const router = useRouter();
   const { userName, teamName, teamId, teams } = useTeam();
+  const queryClient = useQueryClient();
+
+  const switchTeam = useMutation({
+    mutationFn: (newTeamId: string) =>
+      authClient.organization.setActive({ organizationId: newTeamId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["session"] });
+    },
+  });
 
   async function handleLogout() {
     await authClient.signOut();
     router.push("/login");
   }
 
-  async function handleSwitchTeam(newTeamId: string) {
+  function handleSwitchTeam(newTeamId: string) {
     if (newTeamId === teamId) return;
-    await authClient.organization.setActive({ organizationId: newTeamId });
+    switchTeam.mutate(newTeamId);
     router.push(router.pathname);
   }
 

@@ -3,12 +3,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TeamProvider, useTeam } from "@/lib/team-context";
 
 const mockRouterPush = vi.fn();
 vi.mock("next/router", () => ({
   useRouter: () => ({ push: mockRouterPush, pathname: "/dashboard" }),
 }));
+
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+    },
+  });
+}
+
+function wrap(children: React.ReactNode) {
+  return (
+    <QueryClientProvider client={createTestQueryClient()}>
+      {children}
+    </QueryClientProvider>
+  );
+}
 
 function TeamConsumer() {
   const { userName, userId, teamName, teamId, teams, loading } = useTeam();
@@ -52,11 +69,11 @@ describe("TeamProvider", () => {
         }),
     });
 
-    render(
+    render(wrap(
       <TeamProvider>
         <TeamConsumer />
       </TeamProvider>
-    );
+    ));
 
     expect(screen.getByTestId("loading")).toBeInTheDocument();
 
@@ -77,11 +94,11 @@ describe("TeamProvider", () => {
       json: () => Promise.resolve({ session: null }),
     });
 
-    render(
+    render(wrap(
       <TeamProvider>
         <TeamConsumer />
       </TeamProvider>
-    );
+    ));
 
     await waitFor(() => {
       expect(mockRouterPush).toHaveBeenCalledWith("/login");
@@ -101,11 +118,11 @@ describe("TeamProvider", () => {
         }),
     });
 
-    render(
+    render(wrap(
       <TeamProvider>
         <TeamConsumer />
       </TeamProvider>
-    );
+    ));
 
     await waitFor(() => {
       expect(screen.getByTestId("userName")).toHaveTextContent("Bob");
@@ -113,6 +130,85 @@ describe("TeamProvider", () => {
       expect(screen.getByTestId("teamName")).toHaveTextContent("null");
       expect(screen.getByTestId("teamId")).toHaveTextContent("null");
       expect(screen.getByTestId("teams")).toHaveTextContent("");
+    });
+  });
+
+  it("shows cached data on network failure instead of redirecting", async () => {
+    let callCount = 0;
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              session: {
+                user: { id: "user-1", name: "Alice" },
+                session: { activeOrganizationId: "org-1" },
+              },
+              userName: "Alice",
+              teamName: "Team Alpha",
+              teamId: "org-1",
+              teams: [{ id: "org-1", name: "Team Alpha" }],
+            }),
+        });
+      }
+      return Promise.reject(new Error("Network error"));
+    });
+
+    const queryClient = createTestQueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TeamProvider>
+          <TeamConsumer />
+        </TeamProvider>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("userName")).toHaveTextContent("Alice");
+    });
+
+    await queryClient.invalidateQueries({ queryKey: ["session"] });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("userName")).toHaveTextContent("Alice");
+    });
+
+    expect(mockRouterPush).not.toHaveBeenCalledWith("/login");
+  });
+
+  it("maps loading to isLoading only, not isFetching", async () => {
+    let resolveFetch!: (v: { ok: boolean; json: () => Promise<unknown> }) => void;
+    const fetchPromise = new Promise((r) => { resolveFetch = r as typeof resolveFetch; });
+
+    globalThis.fetch = vi.fn().mockReturnValue(fetchPromise);
+
+    render(wrap(
+      <TeamProvider>
+        <TeamConsumer />
+      </TeamProvider>
+    ));
+
+    expect(screen.getByTestId("loading")).toBeInTheDocument();
+
+    resolveFetch({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          session: {
+            user: { id: "user-1", name: "Alice" },
+            session: { activeOrganizationId: "org-1" },
+          },
+          userName: "Alice",
+          teamName: "Team Alpha",
+          teamId: "org-1",
+          teams: [{ id: "org-1", name: "Team Alpha" }],
+        }),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("userName")).toHaveTextContent("Alice");
     });
   });
 });
