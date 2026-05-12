@@ -22,6 +22,14 @@ interface MemberData {
 }
 
 export default function MembersPage() {
+  return (
+    <DashboardLayout>
+      <MembersContent />
+    </DashboardLayout>
+  );
+}
+
+function MembersContent() {
   const router = useRouter();
   const { teamId, userId, loading: teamLoading } = useTeam();
 
@@ -122,7 +130,7 @@ export default function MembersPage() {
   const showSkeleton = teamLoading || isLoading;
 
   return (
-    <DashboardLayout>
+    <>
       <main className="mx-auto max-w-3xl px-6 py-12">
         <div className="mb-8 flex items-center gap-2 text-sm text-stone-500">
           <Link href="/dashboard" className="hover:text-stone-900">
@@ -229,6 +237,6 @@ export default function MembersPage() {
         variant="destructive"
         confirmDisabled={!!removingId}
       />
-    </DashboardLayout>
+    </>
   );
 }

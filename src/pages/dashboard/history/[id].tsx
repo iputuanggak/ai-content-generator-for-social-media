@@ -32,6 +32,14 @@ interface OutputState {
 }
 
 export default function HistoryDetailPage() {
+  return (
+    <DashboardLayout>
+      <HistoryDetailContent />
+    </DashboardLayout>
+  );
+}
+
+function HistoryDetailContent() {
   useTeam();
   const router = useRouter();
   const id = router.query.id as string | undefined;
@@ -98,17 +106,15 @@ export default function HistoryDetailPage() {
 
   if (notFound) {
     return (
-      <DashboardLayout>
-        <main className="mx-auto max-w-5xl px-6 py-12">
-          <h1 className="text-xl font-semibold text-zinc-900">Generation not found</h1>
-          <Link
-            href="/dashboard/history"
-            className="mt-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
-          >
-            ← Back to History
-          </Link>
-        </main>
-      </DashboardLayout>
+      <main className="mx-auto max-w-5xl px-6 py-12">
+        <h1 className="text-xl font-semibold text-zinc-900">Generation not found</h1>
+        <Link
+          href="/dashboard/history"
+          className="mt-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
+        >
+          ← Back to History
+        </Link>
+      </main>
     );
   }
 
@@ -227,8 +233,7 @@ export default function HistoryDetailPage() {
   }
 
   return (
-    <DashboardLayout>
-      <main className="mx-auto max-w-5xl px-6 py-12">
+    <main className="mx-auto max-w-5xl px-6 py-12">
         {/* Back link */}
         <Link
           href="/dashboard/history"
@@ -292,6 +297,5 @@ export default function HistoryDetailPage() {
           </>
         ) : null}
       </main>
-    </DashboardLayout>
   );
 }

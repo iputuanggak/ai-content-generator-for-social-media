@@ -20,6 +20,14 @@ const TONE_OPTIONS: { value: Tone; label: string }[] = [
 ];
 
 export default function SettingsPage() {
+  return (
+    <DashboardLayout>
+      <SettingsContent />
+    </DashboardLayout>
+  );
+}
+
+function SettingsContent() {
   const router = useRouter();
   const { teamId, loading: teamLoading } = useTeam();
 
@@ -95,8 +103,7 @@ export default function SettingsPage() {
   const showSkeleton = teamLoading || isLoading;
 
   return (
-    <DashboardLayout>
-      <main className="mx-auto max-w-2xl px-6 py-12">
+    <main className="mx-auto max-w-2xl px-6 py-12">
         <div className="mb-8 flex items-center gap-2 text-sm text-stone-500">
           <span className="text-stone-900">Brand Settings</span>
         </div>
@@ -219,6 +226,5 @@ export default function SettingsPage() {
           </div>
         )}
       </main>
-    </DashboardLayout>
   );
 }

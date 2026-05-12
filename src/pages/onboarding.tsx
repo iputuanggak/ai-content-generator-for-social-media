@@ -24,18 +24,22 @@ export default function OnboardingPage() {
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
 
-    const { error: orgError } = await authClient.organization.create({
+    const { data: orgData, error: orgError } = await authClient.organization.create({
       name: teamName,
       slug,
     });
 
-    setLoading(false);
-
     if (orgError) {
+      setLoading(false);
       setError(orgError.message ?? "Failed to create team. Please try again.");
       return;
     }
 
+    if (orgData?.id) {
+      await authClient.organization.setActive({ organizationId: orgData.id });
+    }
+
+    setLoading(false);
     router.push("/dashboard");
   }
 

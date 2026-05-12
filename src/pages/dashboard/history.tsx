@@ -54,6 +54,14 @@ function capitalize(s: string) {
 }
 
 export default function HistoryPage() {
+  return (
+    <DashboardLayout>
+      <HistoryContent />
+    </DashboardLayout>
+  );
+}
+
+function HistoryContent() {
   useTeam();
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [total, setTotal] = useState(0);
@@ -113,7 +121,7 @@ export default function HistoryPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <DashboardLayout>
+    <>
       <main className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="mb-6 text-2xl font-semibold text-zinc-900">Generation History</h1>
 
@@ -264,7 +272,7 @@ export default function HistoryPage() {
         variant="destructive"
         confirmDisabled={isDeleting}
       />
-    </DashboardLayout>
+    </>
   );
 }
 

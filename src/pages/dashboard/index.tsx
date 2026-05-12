@@ -52,6 +52,14 @@ const TONE_OPTIONS: { value: Tone; label: string }[] = [
 ];
 
 export default function DashboardPage() {
+  return (
+    <DashboardLayout>
+      <DashboardContent />
+    </DashboardLayout>
+  );
+}
+
+function DashboardContent() {
   const { userName, teamName, teamId, loading: teamLoading } = useTeam();
 
   const [brandSettingsLoaded, setBrandSettingsLoaded] = useState(false);
@@ -316,9 +324,8 @@ export default function DashboardPage() {
   const showResultsArea = isGenerating || hasResults;
 
   return (
-    <DashboardLayout>
-      <main className="mx-auto max-w-5xl px-6 py-12">
-        {teamLoading || brandSettingsLoading ? (
+    <main className="mx-auto max-w-5xl px-6 py-12">
+      {teamLoading || brandSettingsLoading ? (
           <div className="space-y-6">
             <ContentSkeleton lines={2} />
             <div className="rounded-2xl border border-amber-100 bg-amber-50/40 p-6">
@@ -455,6 +462,5 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
-    </DashboardLayout>
   );
 }

@@ -33,6 +33,7 @@ export default async function handler(
     if (orgs?.length) {
       teamName = orgs[0].name;
       activeOrgId = orgs[0].id;
+      await auth.api.setActiveOrganization({ headers, body: { organizationId: orgs[0].id } });
     }
   }
 
