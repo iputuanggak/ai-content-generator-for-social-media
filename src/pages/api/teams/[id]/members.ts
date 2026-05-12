@@ -44,7 +44,9 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     .innerJoin(user, eq(member.userId, user.id))
     .where(eq(member.organizationId, teamId));
 
-  return res.status(200).json({ members: rows });
+  const isAdmin = currentMemberRows[0].role === "owner" || currentMemberRows[0].role === "admin";
+
+  return res.status(200).json({ members: rows, isAdmin });
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {

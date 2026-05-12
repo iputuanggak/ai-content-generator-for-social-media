@@ -1,13 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import { toast } from "sonner";
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { member, user } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
-import type { GetServerSideProps } from "next";
-import { requireAuthPage } from "@/lib/require-auth-page";
+import { useTeam } from "@/lib/team-context";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { ContentSkeleton } from "@/components/content-skeleton";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,30 +21,49 @@ interface MemberData {
   };
 }
 
-interface MembersPageProps {
-  userName: string;
-  teamName: string;
-  teamId: string;
-  isAdmin: boolean;
-  currentUserId: string;
-  members: MemberData[];
-  teams: { id: string; name: string }[];
-}
+export default function MembersPage() {
+  const router = useRouter();
+  const { teamId, userId, loading: teamLoading } = useTeam();
 
-export default function MembersPage({
-  userName,
-  teamName,
-  teamId,
-  isAdmin,
-  currentUserId,
-  members: initialMembers,
-  teams,
-}: MembersPageProps) {
-  const [members, setMembers] = useState<MemberData[]>(initialMembers);
+  const [members, setMembers] = useState<MemberData[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState<MemberData | null>(null);
+
+  useEffect(() => {
+    if (!teamId || teamLoading) return;
+    let cancelled = false;
+
+    fetch(`/api/teams/${teamId}/members`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed");
+        return res.json();
+      })
+      .then((data: { members: MemberData[]; isAdmin: boolean }) => {
+        if (cancelled) return;
+        setMembers(data.members);
+        setIsAdmin(data.isAdmin);
+      })
+      .catch(() => {
+        if (cancelled) return;
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [teamId, teamLoading]);
+
+  useEffect(() => {
+    if (!teamLoading && !teamId) {
+      router.push("/onboarding");
+    }
+  }, [teamLoading, teamId, router]);
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -103,10 +119,11 @@ export default function MembersPage({
     member: "Member",
   };
 
+  const showSkeleton = teamLoading || isLoading;
+
   return (
     <DashboardLayout>
       <main className="mx-auto max-w-3xl px-6 py-12">
-        {/* Breadcrumb */}
         <div className="mb-8 flex items-center gap-2 text-sm text-stone-500">
           <Link href="/dashboard" className="hover:text-stone-900">
             Dashboard
@@ -127,68 +144,73 @@ export default function MembersPage({
           </div>
         </div>
 
-        {/* Invite form — admin only */}
-        {isAdmin && (
-          <section className="mb-8 rounded-xl border border-stone-200 bg-stone-50 p-6 shadow-sm">
-            <h2 className="mb-4 text-base font-semibold text-stone-900">Invite a Member</h2>
-            <form onSubmit={handleInvite} className="flex gap-3">
-              <Input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="Enter email address…"
-                required
-                className="flex-1"
-              />
-              <Button
-                type="submit"
-                disabled={isInviting || !inviteEmail.trim()}
-              >
-                {isInviting ? "Sending…" : "Send Invite"}
-              </Button>
-            </form>
-          </section>
-        )}
-
-        {/* Members list */}
-        <section className="rounded-xl border border-stone-200 bg-stone-50 shadow-sm">
-          <div className="divide-y divide-stone-100">
-            {members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between px-6 py-4">
-                <div>
-                  <p className="text-sm font-medium text-stone-900">{m.user.name}</p>
-                  <p className="text-xs text-stone-500">{m.user.email}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span
-                    className={[
-                      "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                      m.role === "owner"
-                        ? "bg-teal-600 text-white"
-                        : m.role === "admin"
-                        ? "border border-teal-500 text-teal-700 bg-teal-50"
-                        : "bg-stone-200 text-stone-600",
-                    ].join(" ")}
-                  >
-                    {ROLE_LABELS[m.role] ?? m.role}
-                  </span>
-
-                  {/* Remove button — admin only, can't remove self or owners */}
-                  {isAdmin && m.userId !== currentUserId && m.role !== "owner" && (
-                    <Button
-                      variant="destructive"
-                      size="xs"
-                      onClick={() => setConfirmRemoveMember(m)}
-                      disabled={removingId === m.id}
-                    >
-                      {removingId === m.id ? "Removing…" : "Remove"}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+        {showSkeleton ? (
+          <div className="rounded-xl border border-stone-200 bg-stone-50 p-6 shadow-sm">
+            <ContentSkeleton lines={6} />
           </div>
-        </section>
+        ) : (
+          <>
+            {isAdmin && (
+              <section className="mb-8 rounded-xl border border-stone-200 bg-stone-50 p-6 shadow-sm">
+                <h2 className="mb-4 text-base font-semibold text-stone-900">Invite a Member</h2>
+                <form onSubmit={handleInvite} className="flex gap-3">
+                  <Input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="Enter email address…"
+                    required
+                    className="flex-1"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={isInviting || !inviteEmail.trim()}
+                  >
+                    {isInviting ? "Sending…" : "Send Invite"}
+                  </Button>
+                </form>
+              </section>
+            )}
+
+            <section className="rounded-xl border border-stone-200 bg-stone-50 shadow-sm">
+              <div className="divide-y divide-stone-100">
+                {members.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between px-6 py-4">
+                    <div>
+                      <p className="text-sm font-medium text-stone-900">{m.user.name}</p>
+                      <p className="text-xs text-stone-500">{m.user.email}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={[
+                          "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                          m.role === "owner"
+                            ? "bg-teal-600 text-white"
+                            : m.role === "admin"
+                            ? "border border-teal-500 text-teal-700 bg-teal-50"
+                            : "bg-stone-200 text-stone-600",
+                        ].join(" ")}
+                      >
+                        {ROLE_LABELS[m.role] ?? m.role}
+                      </span>
+
+                      {isAdmin && m.userId !== userId && m.role !== "owner" && (
+                        <Button
+                          variant="destructive"
+                          size="xs"
+                          onClick={() => setConfirmRemoveMember(m)}
+                          disabled={removingId === m.id}
+                        >
+                          {removingId === m.id ? "Removing…" : "Remove"}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
       </main>
 
       <ConfirmDialog
@@ -210,80 +232,3 @@ export default function MembersPage({
     </DashboardLayout>
   );
 }
-
-export const getServerSideProps = requireAuthPage(
-  async ({ authHeaders, session }) => {
-    let activeOrgId = session.session.activeOrganizationId;
-
-    if (!activeOrgId) {
-      const listResponse = await auth.api.listOrganizations({ headers: authHeaders });
-      if (listResponse && listResponse.length > 0) {
-        activeOrgId = listResponse[0].id;
-        await auth.api.setActiveOrganization({
-          headers: authHeaders,
-          body: { organizationId: listResponse[0].id },
-        });
-      }
-    }
-
-    if (!activeOrgId) {
-      return { redirect: { destination: "/onboarding", permanent: false } };
-    }
-
-    const orgResponse = await auth.api.getFullOrganization({
-      headers: authHeaders,
-      query: { organizationId: activeOrgId },
-    });
-
-    if (!orgResponse) {
-      return { redirect: { destination: "/onboarding", permanent: false } };
-    }
-
-    // Check member role
-    const memberRows = await db
-      .select()
-      .from(member)
-      .where(and(eq(member.organizationId, activeOrgId), eq(member.userId, session.user.id)))
-      .limit(1);
-
-    const isAdmin =
-      memberRows.length > 0 &&
-      (memberRows[0].role === "owner" || memberRows[0].role === "admin");
-
-    // List all members with user info
-    const membersWithUsers = await db
-      .select({
-        id: member.id,
-        userId: member.userId,
-        role: member.role,
-        createdAt: member.createdAt,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        },
-      })
-      .from(member)
-      .innerJoin(user, eq(member.userId, user.id))
-      .where(eq(member.organizationId, activeOrgId));
-
-    // List all teams the user belongs to for team switcher
-    const allOrgs = await auth.api.listOrganizations({ headers: authHeaders });
-    const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
-
-    return {
-      props: {
-        userName: session.user.name,
-        teamName: orgResponse.name,
-        teamId: activeOrgId,
-        isAdmin,
-        currentUserId: session.user.id,
-        members: membersWithUsers.map((m) => ({
-          ...m,
-          createdAt: m.createdAt.toISOString(),
-        })),
-        teams,
-      },
-    };
-  }
-);

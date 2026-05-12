@@ -54,7 +54,8 @@ async function handleListMembers({
   if (!currentMember) return { status: 403, body: { error: "Forbidden" } };
 
   const members = await listMembers(teamId);
-  return { status: 200, body: { members } };
+  const isAdmin = currentMember.role === "owner" || currentMember.role === "admin";
+  return { status: 200, body: { members, isAdmin } };
 }
 
 // ─── POST /api/teams/[id]/members (invite by email) ──────────────────────────
@@ -211,6 +212,18 @@ describe("GET /api/teams/[id]/members", () => {
     });
     expect(result.status).toBe(200);
     expect((result.body as { members: MockMemberWithUser[] }).members).toHaveLength(2);
+    expect((result.body as { isAdmin: boolean }).isAdmin).toBe(false);
+  });
+
+  it("returns 200 with isAdmin true for admin", async () => {
+    const result = await handleListMembers({
+      teamId: "org-1",
+      session: adminSession,
+      getMember: async () => adminMember,
+      listMembers: async () => membersWithUsers,
+    });
+    expect(result.status).toBe(200);
+    expect((result.body as { isAdmin: boolean }).isAdmin).toBe(true);
   });
 
   it("returns members list for admin too", async () => {

@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 
 interface TeamData {
   userName: string;
+  userId: string;
   teamName: string | null;
   teamId: string | null;
   teams: { id: string; name: string }[];
@@ -18,6 +19,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [data, setData] = useState<TeamData>({
     userName: "",
+    userId: "",
     teamName: null,
     teamId: null,
     teams: [],
@@ -36,6 +38,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         }
         setData({
           userName: json.userName ?? "",
+          userId: json.session?.user?.id ?? "",
           teamName: json.teamName ?? null,
           teamId: json.teamId ?? null,
           teams: json.teams ?? [],

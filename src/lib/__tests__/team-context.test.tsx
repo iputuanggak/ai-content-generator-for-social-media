@@ -11,11 +11,12 @@ vi.mock("next/router", () => ({
 }));
 
 function TeamConsumer() {
-  const { userName, teamName, teamId, teams, loading } = useTeam();
+  const { userName, userId, teamName, teamId, teams, loading } = useTeam();
   if (loading) return <div data-testid="loading">loading</div>;
   return (
     <div>
       <div data-testid="userName">{userName}</div>
+      <div data-testid="userId">{userId}</div>
       <div data-testid="teamName">{teamName ?? "null"}</div>
       <div data-testid="teamId">{teamId ?? "null"}</div>
       <div data-testid="teams">{teams.map((t) => t.name).join(",")}</div>
@@ -41,7 +42,7 @@ describe("TeamProvider", () => {
       json: () =>
         Promise.resolve({
           session: {
-            user: { name: "Alice" },
+            user: { id: "user-1", name: "Alice" },
             session: { activeOrganizationId: "org-1" },
           },
           userName: "Alice",
@@ -61,6 +62,7 @@ describe("TeamProvider", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("userName")).toHaveTextContent("Alice");
+      expect(screen.getByTestId("userId")).toHaveTextContent("user-1");
       expect(screen.getByTestId("teamName")).toHaveTextContent("Team Alpha");
       expect(screen.getByTestId("teamId")).toHaveTextContent("org-1");
       expect(screen.getByTestId("teams")).toHaveTextContent("Team Alpha");
@@ -91,7 +93,7 @@ describe("TeamProvider", () => {
       ok: true,
       json: () =>
         Promise.resolve({
-          session: { user: { name: "Bob" }, session: {} },
+          session: { user: { id: "user-2", name: "Bob" }, session: {} },
           userName: "Bob",
           teamName: null,
           teamId: null,
@@ -107,6 +109,7 @@ describe("TeamProvider", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("userName")).toHaveTextContent("Bob");
+      expect(screen.getByTestId("userId")).toHaveTextContent("user-2");
       expect(screen.getByTestId("teamName")).toHaveTextContent("null");
       expect(screen.getByTestId("teamId")).toHaveTextContent("null");
       expect(screen.getByTestId("teams")).toHaveTextContent("");
