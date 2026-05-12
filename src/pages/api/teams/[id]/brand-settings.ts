@@ -47,7 +47,9 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
   if (rows.length === 0) return res.status(404).json({ error: "Brand settings not found" });
 
-  return res.status(200).json(rows[0]);
+  const isAdmin = memberRows[0].role === "owner" || memberRows[0].role === "admin";
+
+  return res.status(200).json({ ...rows[0], role: memberRows[0].role, isAdmin });
 }
 
 async function handlePut(req: NextApiRequest, res: NextApiResponse) {
