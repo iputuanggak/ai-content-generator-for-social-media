@@ -31,7 +31,7 @@ export default function MembersPage() {
 
 function MembersContent() {
   const router = useRouter();
-  const { teamId, userId, loading: teamLoading } = useTeam();
+  const { teamId, userId, slug, loading: teamLoading } = useTeam();
 
   const [members, setMembers] = useState<MemberData[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -133,7 +133,7 @@ function MembersContent() {
     <>
       <main className="mx-auto max-w-3xl px-6 py-12">
         <div className="mb-8 flex items-center gap-2 text-sm text-stone-500">
-          <Link href="/dashboard" className="hover:text-stone-900">
+          <Link href={`/${slug}`} className="hover:text-stone-900">
             Dashboard
           </Link>
           <span>/</span>
@@ -144,7 +144,7 @@ function MembersContent() {
           <h1 className="text-2xl font-semibold text-stone-900">Team Members</h1>
           <div className="flex items-center gap-2">
             <Link
-              href="/dashboard/settings"
+              href={`/${slug}/settings`}
               className="rounded-lg border border-stone-200 px-3 py-1.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
             >
               Settings

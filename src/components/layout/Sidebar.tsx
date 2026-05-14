@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
 import { useTeam } from "@/lib/team-context";
 import { Button } from "@/components/ui/button";
@@ -15,40 +14,30 @@ interface SidebarProps {
   onNavigate?: () => void;
 }
 
-const NAV_LINKS = [
-  { label: "Generate", href: "/dashboard" },
-  { label: "History", href: "/dashboard/history" },
-  { label: "Members", href: "/dashboard/members" },
-  { label: "Settings", href: "/dashboard/settings" },
-];
+function buildNavLinks(slug: string | null) {
+  const base = slug ? `/${slug}` : "/dashboard";
+  return [
+    { label: "Generate", href: base },
+    { label: "History", href: `${base}/history` },
+    { label: "Members", href: `${base}/members` },
+    { label: "Settings", href: `${base}/settings` },
+  ];
+}
 
 export function Sidebar({ onNavigate }: SidebarProps) {
   const router = useRouter();
-  const { userName, teamName, teamId, teams } = useTeam();
-  const queryClient = useQueryClient();
-
-  const switchTeam = useMutation({
-    mutationFn: (newTeamId: string) =>
-      authClient.organization.setActive({ organizationId: newTeamId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["session"] });
-    },
-  });
+  const { userName, teamName, teamId, slug, teams } = useTeam();
+  const navLinks = buildNavLinks(slug);
 
   async function handleLogout() {
     await authClient.signOut();
     router.push("/login");
   }
 
-  function handleSwitchTeam(newTeamId: string) {
-    if (newTeamId === teamId) return;
-    switchTeam.mutate(newTeamId);
-    router.push(router.pathname);
-  }
-
   function isActive(href: string) {
-    if (href === "/dashboard") {
-      return router.pathname === "/dashboard";
+    const base = slug ? `/${slug}` : "/dashboard";
+    if (href === base) {
+      return router.pathname === "/[slug]" || router.pathname === "/dashboard";
     }
     return router.pathname.startsWith(href);
   }
@@ -78,7 +67,11 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               {teams.map((t) => (
                 <DropdownMenuItem
                   key={t.id}
-                  onSelect={() => handleSwitchTeam(t.id)}
+                  onSelect={() => {
+                    if (t.id === teamId) return;
+                    const currentPath = router.asPath.replace(/^\/[^/]+/, "");
+                    router.push(`/${t.slug}${currentPath}`);
+                  }}
                   className={t.id === teamId ? "font-medium text-teal-600" : ""}
                 >
                   {t.name}
@@ -96,7 +89,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {NAV_LINKS.map(({ label, href }) => (
+        {navLinks.map(({ label, href }) => (
           <Link
             key={href}
             href={href}

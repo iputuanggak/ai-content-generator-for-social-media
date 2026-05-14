@@ -62,7 +62,7 @@ export default function HistoryPage() {
 }
 
 function HistoryContent() {
-  useTeam();
+  const { slug } = useTeam();
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -169,7 +169,7 @@ function HistoryContent() {
             </p>
             {!search && !from && !to && (
               <Link
-                href="/dashboard"
+                href={`/${slug}`}
                 className="mt-4 inline-block rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700"
               >
                 Create your first generation
@@ -183,7 +183,7 @@ function HistoryContent() {
                 key={gen.id}
                 className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm transition hover:border-amber-200 hover:shadow-md"
               >
-                <Link href={`/dashboard/history/${gen.id}`} className="flex-1 min-w-0 group">
+                <Link href={`/${slug}/history/${gen.id}`} className="flex-1 min-w-0 group">
                   <p className="font-semibold text-zinc-900 group-hover:underline truncate text-base">
                     {gen.topic}
                   </p>

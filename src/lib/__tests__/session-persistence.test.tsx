@@ -11,7 +11,7 @@ import { TeamProvider, useTeam } from "@/lib/team-context";
 
 const mockRouterPush = vi.fn();
 vi.mock("next/router", () => ({
-  useRouter: () => ({ push: mockRouterPush, pathname: "/dashboard" }),
+  useRouter: () => ({ push: mockRouterPush, pathname: "/[slug]", query: { slug: "acme" } }),
 }));
 
 const PERSIST_KEY = "test-session-cache";

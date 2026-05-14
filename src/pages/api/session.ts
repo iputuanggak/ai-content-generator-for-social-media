@@ -38,7 +38,7 @@ export default async function handler(
   }
 
   const allOrgs = await auth.api.listOrganizations({ headers });
-  const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name }));
+  const teams = (allOrgs ?? []).map((o) => ({ id: o.id, name: o.name, slug: o.slug ?? null }));
 
   res.status(200).json({
     session,

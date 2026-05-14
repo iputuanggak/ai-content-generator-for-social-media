@@ -33,7 +33,7 @@ export default function AcceptInvitationPage() {
       } else {
         setStatus("success");
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push("/teams");
         }, 2000);
       }
     } catch {

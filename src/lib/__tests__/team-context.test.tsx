@@ -8,7 +8,7 @@ import { TeamProvider, useTeam } from "@/lib/team-context";
 
 const mockRouterPush = vi.fn();
 vi.mock("next/router", () => ({
-  useRouter: () => ({ push: mockRouterPush, pathname: "/dashboard" }),
+  useRouter: () => ({ push: mockRouterPush, pathname: "/[slug]", query: { slug: "acme" } }),
 }));
 
 function createTestQueryClient() {
@@ -54,19 +54,27 @@ describe("TeamProvider", () => {
   });
 
   it("shows loading state initially then fetches session data", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          session: {
-            user: { id: "user-1", name: "Alice" },
-            session: { activeOrganizationId: "org-1" },
-          },
-          userName: "Alice",
-          teamName: "Team Alpha",
-          teamId: "org-1",
-          teams: [{ id: "org-1", name: "Team Alpha" }],
-        }),
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/api/teams/resolve")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ id: "org-1", name: "Team Alpha", slug: "acme", role: "member" }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            session: {
+              user: { id: "user-1", name: "Alice" },
+              session: { activeOrganizationId: "org-1" },
+            },
+            userName: "Alice",
+            teamName: "Team Alpha",
+            teamId: "org-1",
+            teams: [{ id: "org-1", name: "Team Alpha", slug: "acme" }],
+          }),
+      });
     });
 
     render(wrap(
@@ -135,9 +143,15 @@ describe("TeamProvider", () => {
 
   it("shows cached data on network failure instead of redirecting", async () => {
     let callCount = 0;
-    globalThis.fetch = vi.fn().mockImplementation(() => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
       callCount++;
-      if (callCount === 1) {
+      if (url.includes("/api/teams/resolve")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ id: "org-1", name: "Team Alpha", slug: "acme", role: "member" }),
+        });
+      }
+      if (callCount <= 2) {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -149,7 +163,7 @@ describe("TeamProvider", () => {
               userName: "Alice",
               teamName: "Team Alpha",
               teamId: "org-1",
-              teams: [{ id: "org-1", name: "Team Alpha" }],
+              teams: [{ id: "org-1", name: "Team Alpha", slug: "acme" }],
             }),
         });
       }
@@ -203,7 +217,7 @@ describe("TeamProvider", () => {
           userName: "Alice",
           teamName: "Team Alpha",
           teamId: "org-1",
-          teams: [{ id: "org-1", name: "Team Alpha" }],
+          teams: [{ id: "org-1", name: "Team Alpha", slug: "acme" }],
         }),
     });
 

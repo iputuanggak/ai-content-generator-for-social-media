@@ -8,7 +8,8 @@ const mockTeamContext = {
   userName: "Test User",
   teamName: "Test Team",
   teamId: "team-1",
-  teams: [{ id: "team-1", name: "Test Team" }],
+  slug: "acme",
+  teams: [{ id: "team-1", name: "Test Team", slug: "acme" }],
   loading: false,
 };
 
@@ -23,7 +24,7 @@ vi.mock("@/components/layout/DashboardLayout", () => ({
 }));
 
 vi.mock("next/router", () => ({
-  useRouter: () => ({ push: vi.fn(), pathname: "/dashboard/history/[id]", query: { id: "gen-1" } }),
+  useRouter: () => ({ push: vi.fn(), pathname: "/[slug]/history/[id]", query: { slug: "acme", id: "gen-1" } }),
 }));
 
 const mockGeneration = {
@@ -55,7 +56,7 @@ const mockFetch = vi.fn((url: string) => {
 });
 global.fetch = mockFetch;
 
-import HistoryDetailPage from "../dashboard/history/[id]";
+import HistoryDetailPage from "../[slug]/history/[id]";
 
 describe("HistoryDetailPage CSR conversion", () => {
   afterEach(() => {
@@ -108,12 +109,12 @@ describe("HistoryDetailPage CSR conversion", () => {
     render(<HistoryDetailPage />);
     await screen.findByText("Summer sale campaign");
     const backLink = screen.getByText("← Back to History");
-    expect(backLink.closest("a")).toHaveAttribute("href", "/dashboard/history");
+    expect(backLink.closest("a")).toHaveAttribute("href", "/acme/history");
   });
 
   it("shows not found message for 404 response", async () => {
     vi.doMock("next/router", () => ({
-      useRouter: () => ({ push: vi.fn(), pathname: "/dashboard/history/[id]", query: { id: "gen-404" } }),
+      useRouter: () => ({ push: vi.fn(), pathname: "/[slug]/history/[id]", query: { slug: "acme", id: "gen-404" } }),
     }));
     const { container } = render(<HistoryDetailPage />);
     await waitFor(() => {

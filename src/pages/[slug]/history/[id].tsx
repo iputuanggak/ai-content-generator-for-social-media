@@ -40,7 +40,7 @@ export default function HistoryDetailPage() {
 }
 
 function HistoryDetailContent() {
-  useTeam();
+  const { slug } = useTeam();
   const router = useRouter();
   const id = router.query.id as string | undefined;
 
@@ -109,7 +109,7 @@ function HistoryDetailContent() {
       <main className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="text-xl font-semibold text-zinc-900">Generation not found</h1>
         <Link
-          href="/dashboard/history"
+          href={`/${slug}/history`}
           className="mt-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
         >
           ← Back to History
@@ -236,7 +236,7 @@ function HistoryDetailContent() {
     <main className="mx-auto max-w-5xl px-6 py-12">
         {/* Back link */}
         <Link
-          href="/dashboard/history"
+          href={`/${slug}/history`}
           className="mb-6 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
         >
           ← Back to History

@@ -9,7 +9,8 @@ const mockTeamContext = {
   userName: "Test User",
   teamName: "Test Team",
   teamId: "team-1",
-  teams: [{ id: "team-1", name: "Test Team" }],
+  slug: "acme",
+  teams: [{ id: "team-1", name: "Test Team", slug: "acme" }],
   loading: false,
 };
 
@@ -51,7 +52,7 @@ const mockFetch = vi.fn(() =>
 );
 global.fetch = mockFetch;
 
-import HistoryPage from "../dashboard/history";
+import HistoryPage from "../[slug]/history";
 
 describe("HistoryPage CSR conversion", () => {
   afterEach(() => {

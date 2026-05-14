@@ -22,7 +22,7 @@ vi.mock("sonner", () => ({
 
 const mockPush = vi.fn();
 vi.mock("next/router", () => ({
-  useRouter: () => ({ push: mockPush, pathname: "/dashboard/members" }),
+  useRouter: () => ({ push: mockPush, pathname: "/[slug]/members", query: { slug: "acme" } }),
 }));
 
 let teamContextValue = {
@@ -30,7 +30,8 @@ let teamContextValue = {
   userId: "user-1",
   teamName: "Test Team",
   teamId: "team-1" as string | null,
-  teams: [{ id: "team-1", name: "Test Team" }],
+  slug: "acme",
+  teams: [{ id: "team-1", name: "Test Team", slug: "acme" }],
   loading: false,
 };
 
@@ -61,7 +62,7 @@ const membersResponse = {
   isAdmin: true,
 };
 
-import MembersPage from "../dashboard/members";
+import MembersPage from "../[slug]/members";
 
 describe("MembersPage CSR", () => {
   afterEach(() => {
@@ -214,7 +215,7 @@ describe("MembersPage CSR", () => {
   });
 
   it("has no getServerSideProps export", async () => {
-    const mod = await import("../dashboard/members");
+    const mod = await import("../[slug]/members");
     expect((mod as Record<string, unknown>).getServerSideProps).toBeUndefined();
   });
 });

@@ -34,7 +34,9 @@ vi.mock("@/lib/auth-client", () => ({
 
 vi.mock("next/router", () => ({
   useRouter: () => ({
-    pathname: "/dashboard",
+    pathname: "/[slug]",
+    asPath: "/acme",
+    query: { slug: "acme" },
     push: vi.fn(),
   }),
 }));
@@ -45,7 +47,8 @@ describe("MobileDrawer", () => {
     userName: "Test User",
     teamName: "Test Team",
     teamId: "team-1",
-    teams: [{ id: "team-1", name: "Test Team" }],
+    slug: "acme",
+    teams: [{ id: "team-1", name: "Test Team", slug: "acme" }],
   };
 
   const originalFetch = globalThis.fetch;

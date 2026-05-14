@@ -35,7 +35,9 @@ vi.mock("@/lib/auth-client", () => ({
 
 vi.mock("next/router", () => ({
   useRouter: () => ({
-    pathname: "/dashboard",
+    pathname: "/[slug]",
+    asPath: "/acme",
+    query: { slug: "acme" },
     push: vi.fn(),
   }),
 }));
@@ -46,7 +48,8 @@ describe("Sidebar", () => {
     userName: "Test User",
     teamName: "Test Team",
     teamId: "team-1",
-    teams: [{ id: "team-1", name: "Test Team" }],
+    slug: "acme",
+    teams: [{ id: "team-1", name: "Test Team", slug: "acme" }],
   };
 
   const originalFetch = globalThis.fetch;
@@ -55,11 +58,23 @@ describe("Sidebar", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("renders a Button with ghost variant for log out", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(sessionResponse),
+  function mockFetch(sessionRes?: object) {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/api/teams/resolve")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ id: "team-1", name: "Test Team", slug: "acme", role: "member" }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(sessionRes ?? sessionResponse),
+      });
     });
+  }
+
+  it("renders a Button with ghost variant for log out", async () => {
+    mockFetch();
 
     render(
       wrap(
@@ -75,10 +90,7 @@ describe("Sidebar", () => {
   });
 
   it("renders the user name", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(sessionResponse),
-    });
+    mockFetch();
 
     render(
       wrap(
@@ -95,10 +107,7 @@ describe("Sidebar", () => {
     const user = userEvent.setup();
     const { authClient } = await import("@/lib/auth-client");
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(sessionResponse),
-    });
+    mockFetch();
 
     render(
       wrap(

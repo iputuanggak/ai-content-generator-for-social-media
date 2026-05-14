@@ -37,7 +37,7 @@ export default function OnboardingPage() {
     }
 
     setLoading(false);
-    router.push("/dashboard");
+    router.push(`/${slug}`);
   }
 
   return (

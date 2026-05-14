@@ -41,7 +41,7 @@ export default function LoginPage() {
     if (invitationId && typeof invitationId === "string") {
       router.push(`/accept-invitation?invitationId=${invitationId}`);
     } else {
-      router.push("/dashboard");
+      router.push("/teams");
     }
   }
 
