@@ -12,6 +12,10 @@ function hasSessionCookie(request: NextRequest): boolean {
 }
 
 export function proxy(request: NextRequest) {
+  if (request.headers.get("x-nextjs-data") !== null) {
+    return NextResponse.next();
+  }
+
   const { pathname, searchParams } = request.nextUrl;
   const authenticated = hasSessionCookie(request);
 

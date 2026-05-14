@@ -4,6 +4,8 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 
 vi.mock("@/lib/auth-client", () => ({
   authClient: {
@@ -29,6 +31,14 @@ import RegisterPage from "../register";
 import OnboardingPage from "../onboarding";
 import AcceptInvitationPage from "../accept-invitation";
 
+const queryClient = new QueryClient();
+
+function wrap(children: ReactNode) {
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
+
 function getShadcnButtons(container: HTMLElement) {
   return container.querySelectorAll('[data-slot="button"]');
 }
@@ -37,7 +47,7 @@ describe("LoginPage buttons", () => {
   afterEach(cleanup);
 
   it("uses shadcn Button for submit", () => {
-    const { container } = render(<LoginPage />);
+    const { container } = render(wrap(<LoginPage />));
     const buttons = getShadcnButtons(container);
     expect(buttons.length).toBeGreaterThanOrEqual(1);
     const submitBtn = screen.getByRole("button", { name: /sign in/i });
@@ -46,7 +56,7 @@ describe("LoginPage buttons", () => {
   });
 
   it("uses shadcn Button for password toggle with ghost variant", () => {
-    render(<LoginPage />);
+    render(wrap(<LoginPage />));
     const toggleBtn = screen.getByLabelText("Show password");
     expect(toggleBtn).toHaveAttribute("data-slot", "button");
     expect(toggleBtn).toHaveAttribute("data-variant", "ghost");
@@ -54,7 +64,7 @@ describe("LoginPage buttons", () => {
 
   it("password toggle changes aria-label when clicked", async () => {
     const user = userEvent.setup();
-    render(<LoginPage />);
+    render(wrap(<LoginPage />));
     const toggleBtn = screen.getByLabelText("Show password");
     await user.click(toggleBtn);
     expect(screen.getByLabelText("Hide password")).toBeInTheDocument();
@@ -65,7 +75,7 @@ describe("RegisterPage buttons", () => {
   afterEach(cleanup);
 
   it("uses shadcn Button for submit", () => {
-    const { container } = render(<RegisterPage />);
+    const { container } = render(wrap(<RegisterPage />));
     const buttons = getShadcnButtons(container);
     expect(buttons.length).toBeGreaterThanOrEqual(1);
     const submitBtn = screen.getByRole("button", { name: /create account/i });
@@ -74,7 +84,7 @@ describe("RegisterPage buttons", () => {
   });
 
   it("uses shadcn Button for password toggle with ghost variant", () => {
-    render(<RegisterPage />);
+    render(wrap(<RegisterPage />));
     const toggleBtn = screen.getByLabelText("Show password");
     expect(toggleBtn).toHaveAttribute("data-slot", "button");
     expect(toggleBtn).toHaveAttribute("data-variant", "ghost");

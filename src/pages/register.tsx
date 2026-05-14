@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,6 +35,8 @@ export default function RegisterPage() {
       setError(signUpError.message ?? "Registration failed. Please try again.");
       return;
     }
+
+    queryClient.removeQueries({ queryKey: ["session"] });
 
     // If arriving from an invitation link, redirect back to accept it (skip onboarding)
     const { invitationId } = router.query;
