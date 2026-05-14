@@ -40,7 +40,24 @@ export default function LoginPage() {
     const { invitationId } = router.query;
     if (invitationId && typeof invitationId === "string") {
       router.push(`/accept-invitation?invitationId=${invitationId}`);
-    } else {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/session");
+      const data = await res.json();
+      const userTeams: { id: string; name: string; slug: string | null }[] =
+        data.teams ?? [];
+
+      if (userTeams.length === 0) {
+        router.push("/onboarding");
+      } else if (userTeams.length === 1) {
+        const slug = userTeams[0].slug ?? userTeams[0].id;
+        router.push(`/${slug}`);
+      } else {
+        router.push("/teams");
+      }
+    } catch {
       router.push("/teams");
     }
   }
