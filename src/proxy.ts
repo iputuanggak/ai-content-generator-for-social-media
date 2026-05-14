@@ -1,38 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveSlugToOrg } from "@/lib/resolve-slug";
+import { SLUG_DENYLIST } from "@/lib/slug";
 
 const SESSION_COOKIES = [
   "better-auth.session_token",
   "better-auth.session_token.0",
 ];
 
-const AUTH_ROUTES = ["/login", "/register"];
+const EXCLUDED_PREFIXES = [
+  "/api",
+  "/_next",
+  "/login",
+  "/register",
+  "/onboarding",
+  "/accept-invitation",
+  "/teams",
+  "/favicon.ico",
+];
 
 function hasSessionCookie(request: NextRequest): boolean {
   return SESSION_COOKIES.some((name) => request.cookies.has(name));
 }
 
-export function proxy(request: NextRequest) {
-  if (request.headers.get("x-nextjs-data") !== null) {
+function isExcludedPath(pathname: string): boolean {
+  return (
+    EXCLUDED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/")) ||
+    pathname === "/"
+  );
+}
+
+function extractSlug(pathname: string): string | null {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length === 0) return null;
+  const candidate = segments[0];
+  if (SLUG_DENYLIST.has(candidate)) return null;
+  return candidate;
+}
+
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (isExcludedPath(pathname)) {
     return NextResponse.next();
   }
 
-  const { pathname, searchParams } = request.nextUrl;
-  const authenticated = hasSessionCookie(request);
+  const slug = extractSlug(pathname);
+  if (!slug) {
+    return NextResponse.next();
+  }
 
-  if (pathname.startsWith("/dashboard") && !authenticated) {
+  if (!hasSessionCookie(request)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (AUTH_ROUTES.includes(pathname) && authenticated) {
-    if (searchParams.has("invitationId")) {
-      return NextResponse.next();
-    }
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  const result = await resolveSlugToOrg(slug, request.headers);
+
+  if (result.status === 401) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  return NextResponse.next();
+  if (result.status === 404) {
+    return NextResponse.redirect(new URL("/teams", request.url));
+  }
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-org-id", result.body.id);
+  requestHeaders.set("x-org-slug", result.body.slug ?? slug);
+  requestHeaders.set("x-org-role", result.body.role);
+
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/register"],
+  matcher: [
+    {
+      source: "/((?!api/|_next/|login|register|onboarding|accept-invitation|teams|favicon\\.ico).*)",
+    },
+  ],
 };
