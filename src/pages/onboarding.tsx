@@ -5,6 +5,7 @@ import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import type { GetServerSideProps } from "next";
 import { auth } from "@/lib/auth";
+import { generateSlug, sanitizeSlug } from "@/lib/slug";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -17,12 +18,8 @@ export default function OnboardingPage() {
     setError("");
     setLoading(true);
 
-    // Create slug from team name
-    const slug = teamName
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
+    const rawSlug = generateSlug(teamName);
+    const slug = sanitizeSlug(rawSlug);
 
     const { data: orgData, error: orgError } = await authClient.organization.create({
       name: teamName,
