@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { member, user } from "@/lib/db/schema";
-import { buildReqHeaders } from "@/lib/with-session";
+import { buildReqHeaders, withSlugSession } from "@/lib/with-session";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "GET") return handleGet(req, res);
@@ -12,21 +12,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth.api.getSession({ headers: buildReqHeaders(req) });
-  if (!session) return res.status(401).json({ error: "Unauthorized" });
+  const slug = req.query.slug as string;
+  const ctx = await withSlugSession(req, res, slug);
+  if (!ctx) return;
 
-  const teamId = req.query.id as string;
-
-  // Verify requester is a member
-  const currentMemberRows = await db
-    .select()
-    .from(member)
-    .where(and(eq(member.organizationId, teamId), eq(member.userId, session.user.id)))
-    .limit(1);
-
-  if (currentMemberRows.length === 0) return res.status(403).json({ error: "Forbidden" });
-
-  // List all members with user info
   const rows = await db
     .select({
       id: member.id,
@@ -42,30 +31,19 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     })
     .from(member)
     .innerJoin(user, eq(member.userId, user.id))
-    .where(eq(member.organizationId, teamId));
+    .where(eq(member.organizationId, ctx.orgId));
 
-  const isAdmin = currentMemberRows[0].role === "owner" || currentMemberRows[0].role === "admin";
+  const isAdmin = ctx.role === "owner" || ctx.role === "admin";
 
   return res.status(200).json({ members: rows, isAdmin });
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth.api.getSession({ headers: buildReqHeaders(req) });
-  if (!session) return res.status(401).json({ error: "Unauthorized" });
+  const slug = req.query.slug as string;
+  const ctx = await withSlugSession(req, res, slug);
+  if (!ctx) return;
 
-  const teamId = req.query.id as string;
-
-  // Check membership and role
-  const currentMemberRows = await db
-    .select()
-    .from(member)
-    .where(and(eq(member.organizationId, teamId), eq(member.userId, session.user.id)))
-    .limit(1);
-
-  if (currentMemberRows.length === 0) return res.status(403).json({ error: "Forbidden" });
-
-  const currentMember = currentMemberRows[0];
-  if (currentMember.role !== "owner" && currentMember.role !== "admin") {
+  if (ctx.role !== "owner" && ctx.role !== "admin") {
     return res.status(403).json({ error: "Only team admins can invite members" });
   }
 
@@ -74,14 +52,13 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: "Valid email is required" });
   }
 
-  // Use Better Auth organization plugin to create an invitation
   try {
     const result = await auth.api.createInvitation({
       headers: buildReqHeaders(req),
       body: {
         email,
         role: "member",
-        organizationId: teamId,
+        organizationId: ctx.orgId,
       },
     });
 

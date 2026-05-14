@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/lib/auth";
+import { resolveSlugToOrg } from "@/lib/resolve-slug";
 
 export type SessionContext = {
   session: NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
@@ -7,10 +8,14 @@ export type SessionContext = {
   headers: Headers;
 };
 
-/**
- * Builds a WHATWG Headers object from a Next.js API request.
- * Exported so routes that don't need the full auth gate can reuse it.
- */
+export type SlugSessionContext = {
+  session: NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
+  orgId: string;
+  slug: string;
+  role: string;
+  headers: Headers;
+};
+
 export function buildReqHeaders(req: NextApiRequest): Headers {
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
@@ -21,10 +26,6 @@ export function buildReqHeaders(req: NextApiRequest): Headers {
   return headers;
 }
 
-/**
- * Full auth gate for API routes that require both a session and an active org.
- * Writes 401 or 400 and returns null when the gate fails.
- */
 export async function withSession(
   req: NextApiRequest,
   res: NextApiResponse
@@ -44,4 +45,45 @@ export async function withSession(
   }
 
   return { session, activeOrgId, headers };
+}
+
+export async function withSlugSession(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  slugOverride?: string
+): Promise<SlugSessionContext | null> {
+  const headers = buildReqHeaders(req);
+  const session = await auth.api.getSession({ headers });
+
+  if (!session) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+
+  const slug = slugOverride ?? (req.headers["x-org-slug"] as string | undefined);
+
+  if (!slug) {
+    res.status(400).json({ error: "Missing team slug" });
+    return null;
+  }
+
+  const result = await resolveSlugToOrg(slug, headers);
+
+  if (result.status === 401) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+
+  if (result.status === 404) {
+    res.status(403).json({ error: "Forbidden" });
+    return null;
+  }
+
+  return {
+    session,
+    orgId: result.body.id,
+    slug: result.body.slug ?? slug,
+    role: result.body.role,
+    headers,
+  };
 }

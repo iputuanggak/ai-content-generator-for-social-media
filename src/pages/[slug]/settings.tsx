@@ -29,7 +29,7 @@ export default function SettingsPage() {
 
 function SettingsContent() {
   const router = useRouter();
-  const { teamId, loading: teamLoading } = useTeam();
+  const { teamId, slug, loading: teamLoading } = useTeam();
 
   const [brandVoice, setBrandVoice] = useState("");
   const [defaultTone, setDefaultTone] = useState<Tone>("professional");
@@ -40,10 +40,10 @@ function SettingsContent() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!teamId || teamLoading) return;
+    if (!slug || teamLoading) return;
     let cancelled = false;
 
-    fetch(`/api/teams/${teamId}/brand-settings`)
+    fetch(`/api/teams/${slug}/brand-settings`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed");
         return res.json();
@@ -66,7 +66,7 @@ function SettingsContent() {
     return () => {
       cancelled = true;
     };
-  }, [teamId, teamLoading]);
+  }, [slug, teamLoading]);
 
   useEffect(() => {
     if (!teamLoading && !teamId) {
@@ -81,7 +81,7 @@ function SettingsContent() {
     setIsSaving(true);
 
     try {
-      const res = await fetch(`/api/teams/${teamId}/brand-settings`, {
+      const res = await fetch(`/api/teams/${slug}/brand-settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ brandVoice, defaultTone, activePlatforms, modelId }),

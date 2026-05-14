@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { eq, and, ilike, gte, lte, desc } from "drizzle-orm";
 import { member, generation } from "@/lib/db/schema";
 import type { Tone } from "@/lib/content-adapter";
-import { withSession } from "@/lib/with-session";
+import { withSlugSession } from "@/lib/with-session";
 import { generateContent } from "@/lib/generation-service";
 
 export const config = {
@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
-  const ctx = await withSession(req, res);
+  const ctx = await withSlugSession(req, res);
   if (!ctx) return;
 
   const { topic, tone } = req.body as { topic?: string; tone?: Tone };
@@ -35,11 +35,10 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: "tone is required" });
   }
 
-  // Verify the user is a member of the active org
   const memberRows = await db
     .select()
     .from(member)
-    .where(eq(member.organizationId, ctx.activeOrgId))
+    .where(eq(member.organizationId, ctx.orgId))
     .limit(100);
 
   const currentMember = memberRows.find((m) => m.userId === ctx.session.user.id);
@@ -55,7 +54,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     await generateContent({
-      organizationId: ctx.activeOrgId,
+      organizationId: ctx.orgId,
       memberId: currentMember.id,
       topic: topic.trim(),
       tone,
@@ -76,7 +75,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  const ctx = await withSession(req, res);
+  const ctx = await withSlugSession(req, res);
   if (!ctx) return;
 
   const { search, from, to, page: pageStr } = req.query as Record<string, string | undefined>;
@@ -85,7 +84,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const pageSize = 20;
   const offset = (page - 1) * pageSize;
 
-  const filters = [eq(generation.organizationId, ctx.activeOrgId)];
+  const filters = [eq(generation.organizationId, ctx.orgId)];
 
   if (search && search.trim()) {
     filters.push(ilike(generation.topic, `%${search.trim()}%`));

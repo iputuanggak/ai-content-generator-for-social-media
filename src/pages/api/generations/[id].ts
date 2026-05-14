@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { generation, platformOutput } from "@/lib/db/schema";
-import { withSession } from "@/lib/with-session";
+import { withSlugSession } from "@/lib/with-session";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "GET") {
@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  const ctx = await withSession(req, res);
+  const ctx = await withSlugSession(req, res);
   if (!ctx) return;
 
   const { id } = req.query;
@@ -26,7 +26,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
   const genRows = await db.select().from(generation).where(eq(generation.id, id)).limit(1);
   if (genRows.length === 0) return res.status(404).json({ error: "Not found" });
-  if (genRows[0].organizationId !== ctx.activeOrgId)
+  if (genRows[0].organizationId !== ctx.orgId)
     return res.status(403).json({ error: "Forbidden" });
 
   const outputs = await db
@@ -38,7 +38,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
-  const ctx = await withSession(req, res);
+  const ctx = await withSlugSession(req, res);
   if (!ctx) return;
 
   const { id } = req.query;
@@ -57,7 +57,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
 
   const genRows = await db.select().from(generation).where(eq(generation.id, id)).limit(1);
   if (genRows.length === 0) return res.status(404).json({ error: "Not found" });
-  if (genRows[0].organizationId !== ctx.activeOrgId)
+  if (genRows[0].organizationId !== ctx.orgId)
     return res.status(403).json({ error: "Forbidden" });
 
   await db.update(generation).set({ intendedPublishAt: publishDate }).where(eq(generation.id, id));
@@ -66,7 +66,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function handleDelete(req: NextApiRequest, res: NextApiResponse) {
-  const ctx = await withSession(req, res);
+  const ctx = await withSlugSession(req, res);
   if (!ctx) return;
 
   const { id } = req.query;
@@ -74,7 +74,7 @@ async function handleDelete(req: NextApiRequest, res: NextApiResponse) {
 
   const genRows = await db.select().from(generation).where(eq(generation.id, id)).limit(1);
   if (genRows.length === 0) return res.status(404).json({ error: "Not found" });
-  if (genRows[0].organizationId !== ctx.activeOrgId)
+  if (genRows[0].organizationId !== ctx.orgId)
     return res.status(403).json({ error: "Forbidden" });
 
   await db.delete(platformOutput).where(eq(platformOutput.generationId, id));

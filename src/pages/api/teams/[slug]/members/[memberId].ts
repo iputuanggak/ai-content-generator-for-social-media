@@ -1,9 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { member } from "@/lib/db/schema";
-import { buildReqHeaders } from "@/lib/with-session";
+import { withSlugSession } from "@/lib/with-session";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "DELETE") return handleDelete(req, res);
@@ -11,34 +10,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleDelete(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth.api.getSession({ headers: buildReqHeaders(req) });
-  if (!session) return res.status(401).json({ error: "Unauthorized" });
+  const slug = req.query.slug as string;
+  const ctx = await withSlugSession(req, res, slug);
+  if (!ctx) return;
 
-  const teamId = req.query.id as string;
   const memberId = req.query.memberId as string;
 
-  // Verify requester is a member and admin/owner
-  const currentMemberRows = await db
-    .select()
-    .from(member)
-    .where(and(eq(member.organizationId, teamId), eq(member.userId, session.user.id)))
-    .limit(1);
-
-  if (currentMemberRows.length === 0) return res.status(403).json({ error: "Forbidden" });
-
-  const currentMember = currentMemberRows[0];
-  if (currentMember.role !== "owner" && currentMember.role !== "admin") {
+  if (ctx.role !== "owner" && ctx.role !== "admin") {
     return res.status(403).json({ error: "Only team admins can remove members" });
   }
 
-  // Get the target member
   const targetMemberRows = await db
     .select()
     .from(member)
     .where(eq(member.id, memberId))
     .limit(1);
 
-  if (targetMemberRows.length === 0 || targetMemberRows[0].organizationId !== teamId) {
+  if (targetMemberRows.length === 0 || targetMemberRows[0].organizationId !== ctx.orgId) {
     return res.status(404).json({ error: "Member not found" });
   }
 

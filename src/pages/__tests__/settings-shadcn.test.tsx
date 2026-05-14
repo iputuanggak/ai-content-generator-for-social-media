@@ -55,7 +55,8 @@ describe("SettingsPage CSR", () => {
       userName: "Test User",
       teamName: "Test Team",
       teamId: "team-1",
-      teams: [{ id: "team-1", name: "Test Team" }],
+      slug: "acme",
+      teams: [{ id: "team-1", name: "Test Team", slug: "acme" }],
       loading: false,
     };
   });
@@ -180,7 +181,7 @@ describe("SettingsPage CSR", () => {
     await user.click(saveBtn);
     expect(mockFetch).toHaveBeenCalledTimes(2);
     const [url, options] = mockFetch.mock.calls[1];
-    expect(url).toContain("/api/teams/team-1/brand-settings");
+    expect(url).toContain("/api/teams/acme/brand-settings");
     expect(options.method).toBe("PUT");
     const body = JSON.parse(options.body);
     expect(body.brandVoice).toBe("Bold and friendly");
@@ -214,7 +215,7 @@ describe("SettingsPage CSR", () => {
   });
 
   it("redirects to /onboarding when no teamId", async () => {
-    teamContextValue = { ...teamContextValue, loading: false, teamId: null };
+    teamContextValue = { ...teamContextValue, loading: false, teamId: null, slug: null };
     render(<SettingsPage />);
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/onboarding");

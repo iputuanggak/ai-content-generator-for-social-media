@@ -42,10 +42,10 @@ function MembersContent() {
   const [confirmRemoveMember, setConfirmRemoveMember] = useState<MemberData | null>(null);
 
   useEffect(() => {
-    if (!teamId || teamLoading) return;
+    if (!slug || teamLoading) return;
     let cancelled = false;
 
-    fetch(`/api/teams/${teamId}/members`)
+    fetch(`/api/teams/${slug}/members`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed");
         return res.json();
@@ -65,7 +65,7 @@ function MembersContent() {
     return () => {
       cancelled = true;
     };
-  }, [teamId, teamLoading]);
+  }, [slug, teamLoading]);
 
   useEffect(() => {
     if (!teamLoading && !teamId) {
@@ -78,7 +78,7 @@ function MembersContent() {
     setIsInviting(true);
 
     try {
-      const res = await fetch(`/api/teams/${teamId}/members`, {
+      const res = await fetch(`/api/teams/${slug}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: inviteEmail }),
@@ -104,7 +104,7 @@ function MembersContent() {
     setConfirmRemoveMember(null);
 
     try {
-      const res = await fetch(`/api/teams/${teamId}/members/${memberId}`, {
+      const res = await fetch(`/api/teams/${slug}/members/${memberId}`, {
         method: "DELETE",
       });
 

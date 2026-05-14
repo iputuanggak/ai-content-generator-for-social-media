@@ -74,7 +74,8 @@ describe("MembersPage CSR", () => {
       userId: "user-1",
       teamName: "Test Team",
       teamId: "team-1",
-      teams: [{ id: "team-1", name: "Test Team" }],
+      slug: "acme",
+      teams: [{ id: "team-1", name: "Test Team", slug: "acme" }],
       loading: false,
     };
   });
@@ -189,7 +190,7 @@ describe("MembersPage CSR", () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
     const [url, options] = mockFetch.mock.calls[1];
-    expect(url).toContain("/api/teams/team-1/members");
+    expect(url).toContain("/api/teams/acme/members");
     expect(options.method).toBe("POST");
     expect(JSON.parse(options.body)).toEqual({ email: "new@example.com" });
   });
@@ -202,12 +203,12 @@ describe("MembersPage CSR", () => {
     render(<MembersPage />);
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith("/api/teams/team-1/members");
+      expect(mockFetch).toHaveBeenCalledWith("/api/teams/acme/members");
     });
   });
 
   it("redirects to /onboarding when no teamId", async () => {
-    teamContextValue = { ...teamContextValue, loading: false, teamId: null };
+    teamContextValue = { ...teamContextValue, loading: false, teamId: null, slug: null };
     render(<MembersPage />);
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/onboarding");

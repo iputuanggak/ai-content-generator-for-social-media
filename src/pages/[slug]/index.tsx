@@ -60,7 +60,7 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-  const { userName, teamName, teamId, loading: teamLoading } = useTeam();
+  const { userName, teamName, teamId, slug, loading: teamLoading } = useTeam();
 
   const [brandSettingsLoaded, setBrandSettingsLoaded] = useState(false);
   const [defaultTone, setDefaultTone] = useState<Tone>(DEFAULT_TONE);
@@ -87,9 +87,9 @@ function DashboardContent() {
   }, [defaultTone]);
 
   useEffect(() => {
-    if (!teamId || teamLoading) return;
+    if (!slug || teamLoading) return;
     let cancelled = false;
-    fetch(`/api/teams/${teamId}/brand-settings`)
+    fetch(`/api/teams/${slug}/brand-settings`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed");
         return res.json();
@@ -108,7 +108,7 @@ function DashboardContent() {
     return () => {
       cancelled = true;
     };
-  }, [teamId, teamLoading]);
+  }, [slug, teamLoading]);
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();

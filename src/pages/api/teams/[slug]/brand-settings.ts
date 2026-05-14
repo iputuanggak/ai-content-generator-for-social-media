@@ -1,10 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eq, and } from "drizzle-orm";
-import { member, brandSettings } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { brandSettings } from "@/lib/db/schema";
 import type { Tone, Platform } from "@/lib/content-adapter";
-import { buildReqHeaders } from "@/lib/with-session";
+import { withSlugSession } from "@/lib/with-session";
 
 const VALID_TONES: Tone[] = ["professional", "casual", "humorous", "inspirational"];
 const VALID_PLATFORMS: Platform[] = [
@@ -25,50 +24,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth.api.getSession({ headers: buildReqHeaders(req) });
-  if (!session) return res.status(401).json({ error: "Unauthorized" });
-
-  const teamId = req.query.id as string;
-
-  // Check membership
-  const memberRows = await db
-    .select()
-    .from(member)
-    .where(and(eq(member.organizationId, teamId), eq(member.userId, session.user.id)))
-    .limit(1);
-
-  if (memberRows.length === 0) return res.status(403).json({ error: "Forbidden" });
+  const slug = req.query.slug as string;
+  const ctx = await withSlugSession(req, res, slug);
+  if (!ctx) return;
 
   const rows = await db
     .select()
     .from(brandSettings)
-    .where(eq(brandSettings.organizationId, teamId))
+    .where(eq(brandSettings.organizationId, ctx.orgId))
     .limit(1);
 
   if (rows.length === 0) return res.status(404).json({ error: "Brand settings not found" });
 
-  const isAdmin = memberRows[0].role === "owner" || memberRows[0].role === "admin";
+  const isAdmin = ctx.role === "owner" || ctx.role === "admin";
 
-  return res.status(200).json({ ...rows[0], role: memberRows[0].role, isAdmin });
+  return res.status(200).json({ ...rows[0], role: ctx.role, isAdmin });
 }
 
 async function handlePut(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth.api.getSession({ headers: buildReqHeaders(req) });
-  if (!session) return res.status(401).json({ error: "Unauthorized" });
+  const slug = req.query.slug as string;
+  const ctx = await withSlugSession(req, res, slug);
+  if (!ctx) return;
 
-  const teamId = req.query.id as string;
-
-  // Check membership and role
-  const memberRows = await db
-    .select()
-    .from(member)
-    .where(and(eq(member.organizationId, teamId), eq(member.userId, session.user.id)))
-    .limit(1);
-
-  if (memberRows.length === 0) return res.status(403).json({ error: "Forbidden" });
-
-  const currentMember = memberRows[0];
-  if (currentMember.role !== "owner" && currentMember.role !== "admin") {
+  if (ctx.role !== "owner" && ctx.role !== "admin") {
     return res.status(403).json({ error: "Only team admins can edit brand settings" });
   }
 
@@ -79,12 +57,10 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse) {
     modelId?: string;
   };
 
-  // Validate tone
   if (defaultTone !== undefined && !VALID_TONES.includes(defaultTone as Tone)) {
     return res.status(400).json({ error: "Invalid tone" });
   }
 
-  // Validate platforms
   if (activePlatforms !== undefined) {
     for (const p of activePlatforms) {
       if (!VALID_PLATFORMS.includes(p as Platform)) {
@@ -93,7 +69,6 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse) {
     }
   }
 
-  // Build update payload
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (brandVoice !== undefined) updates.brandVoice = brandVoice;
   if (defaultTone !== undefined) updates.defaultTone = defaultTone as Tone;
@@ -103,13 +78,12 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse) {
   await db
     .update(brandSettings)
     .set(updates)
-    .where(eq(brandSettings.organizationId, teamId));
+    .where(eq(brandSettings.organizationId, ctx.orgId));
 
-  // Return updated settings
   const rows = await db
     .select()
     .from(brandSettings)
-    .where(eq(brandSettings.organizationId, teamId))
+    .where(eq(brandSettings.organizationId, ctx.orgId))
     .limit(1);
 
   return res.status(200).json(rows[0]);
