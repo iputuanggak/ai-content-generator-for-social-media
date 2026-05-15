@@ -422,11 +422,12 @@ function DashboardContent() {
                        <span className="text-sm font-medium text-zinc-700 whitespace-nowrap">
                          Intended publish date
                        </span>
-                       <DateTimePicker
-                         value={intendedPublishAt}
-                         onChange={handlePublishDateChange}
-                         placeholder="Pick date & time"
-                       />
+                        <DateTimePicker
+                          value={intendedPublishAt}
+                          onChange={handlePublishDateChange}
+                          placeholder="Pick date & time"
+                          className="w-64"
+                        />
                        {isSavingPublishDate && (
                          <span className="text-xs text-zinc-400">Saving…</span>
                        )}
