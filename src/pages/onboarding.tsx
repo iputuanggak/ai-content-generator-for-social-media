@@ -36,7 +36,6 @@ export default function OnboardingPage() {
       await authClient.organization.setActive({ organizationId: orgData.id });
     }
 
-    setLoading(false);
     router.push(`/${slug}`);
   }
 

@@ -29,9 +29,8 @@ export default function RegisterPage() {
       password,
     });
 
-    setLoading(false);
-
     if (signUpError) {
+      setLoading(false);
       setError(signUpError.message ?? "Registration failed. Please try again.");
       return;
     }
@@ -105,7 +104,7 @@ export default function RegisterPage() {
               variant="ghost"
               size="icon-xs"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-2 top-1/2 -translate-y-1/2"
+              className="absolute right-2 top-1/2 -mt-3"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={16} />
