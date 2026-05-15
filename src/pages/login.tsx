@@ -35,16 +35,30 @@ export default function LoginPage() {
 
     queryClient.removeQueries({ queryKey: ["session"] });
 
-    // If arriving from an invitation link, redirect back to accept it
-    const { invitationId } = router.query;
-    if (invitationId && typeof invitationId === "string") {
-      router.push(`/accept-invitation?invitationId=${invitationId}`);
-      return;
-    }
-
     try {
       const res = await fetch("/api/session");
       const data = await res.json();
+
+      // Check email verification status
+      const emailVerified = data.session?.user?.emailVerified;
+      if (!emailVerified) {
+        // Auto-send OTP and redirect to verification page
+        await fetch("/api/auth/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, purpose: "email_verification" }),
+        });
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
+
+      // If arriving from an invitation link, redirect back to accept it
+      const { invitationId } = router.query;
+      if (invitationId && typeof invitationId === "string") {
+        router.push(`/accept-invitation?invitationId=${invitationId}`);
+        return;
+      }
+
       const userTeams: { id: string; name: string; slug: string | null }[] =
         data.teams ?? [];
 
