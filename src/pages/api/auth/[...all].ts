@@ -1,10 +1,23 @@
 import { auth } from "@/lib/auth";
+import { isDisposableEmail } from "@/lib/disposable-email";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
+  // Server-side guard: block disposable emails on sign-up
+  if (req.method === "POST" && req.url?.includes("/sign-up/email")) {
+    const email: string | undefined = req.body?.email;
+    if (email && isDisposableEmail(email)) {
+      res.status(422).json({
+        error: "DISPOSABLE_EMAIL",
+        message: "This email provider is not supported. Please use a permanent email address.",
+      });
+      return;
+    }
+  }
+
   // Convert Next.js Pages Router request to a standard Request object
   const url = new URL(req.url!, `http://${req.headers.host}`);
   const headers = new Headers();

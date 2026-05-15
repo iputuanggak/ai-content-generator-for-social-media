@@ -7,6 +7,7 @@ import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { isDisposableEmail } from "@/lib/disposable-email";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -21,6 +22,12 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (isDisposableEmail(email)) {
+      setError("This email provider is not supported. Please use a permanent email address.");
+      return;
+    }
+
     setLoading(true);
 
     const { error: signUpError } = await authClient.signUp.email({
