@@ -20,4 +20,4 @@ Single-context layout. `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents
 
 ### Skills
 
-- **ralph**: Autonomous issue-driven build loop. Implements open GitHub Issues labelled `ready-for-agent` one at a time in dependency order using sub-agents. Use when user says "ralph loop", "start building", "implement all issues", or invokes `/ralph`. See `.agents/skills/ralph/SKILL.md`.
+- **ralph-loop**: Autonomous issue-driven build loop. Implements open GitHub Issues labelled `ready-for-agent` one at a time in dependency order using sub-agents. Use when user says "ralph loop", "start building", "implement all issues", or invokes `/ralph`. See `.agents/skills/ralph-loop/SKILL.md`.
