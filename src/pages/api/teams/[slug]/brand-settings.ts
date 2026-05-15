@@ -24,8 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  const slug = req.query.slug as string;
-  const ctx = await withSlugSession(req, res, slug);
+  const ctx = await withSlugSession(req, res);
   if (!ctx) return;
 
   const rows = await db
@@ -42,8 +41,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function handlePut(req: NextApiRequest, res: NextApiResponse) {
-  const slug = req.query.slug as string;
-  const ctx = await withSlugSession(req, res, slug);
+  const ctx = await withSlugSession(req, res);
   if (!ctx) return;
 
   if (ctx.role !== "owner" && ctx.role !== "admin") {

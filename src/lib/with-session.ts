@@ -49,8 +49,7 @@ export async function withSession(
 
 export async function withSlugSession(
   req: NextApiRequest,
-  res: NextApiResponse,
-  slugOverride?: string
+  res: NextApiResponse
 ): Promise<SlugSessionContext | null> {
   const headers = buildReqHeaders(req);
   const session = await auth.api.getSession({ headers });
@@ -60,7 +59,7 @@ export async function withSlugSession(
     return null;
   }
 
-  const slug = slugOverride ?? (req.headers["x-org-slug"] as string | undefined);
+  const slug = req.query.slug as string | undefined;
 
   if (!slug) {
     res.status(400).json({ error: "Missing team slug" });

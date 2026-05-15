@@ -55,10 +55,10 @@ function HistoryDetailContent() {
   const [outputs, setOutputs] = useState<Record<string, OutputState>>({});
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !slug) return;
     let cancelled = false;
 
-    fetch(`/api/generations/${id}`)
+    fetch(`/api/${slug}/generations/${id}`)
       .then((res) => {
         if (res.status === 404 || res.status === 403) {
           if (!cancelled) setNotFound(true);
@@ -102,7 +102,7 @@ function HistoryDetailContent() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, slug]);
 
   if (notFound) {
     return (
@@ -123,7 +123,7 @@ function HistoryDetailContent() {
     if (!gen) return;
     setIsSavingPublishDate(true);
     try {
-      await fetch(`/api/generations/${gen.id}`, {
+      await fetch(`/api/${slug}/generations/${gen.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ intendedPublishAt: date ? date.toISOString() : null }),
@@ -150,7 +150,7 @@ function HistoryDetailContent() {
     }));
 
     try {
-      const res = await fetch(`/api/platform-outputs/${outputId}`, {
+      const res = await fetch(`/api/${slug}/platform-outputs/${outputId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ editedContent: output.editedContent }),
@@ -189,7 +189,7 @@ function HistoryDetailContent() {
     }));
 
     try {
-      const res = await fetch(`/api/platform-outputs/${outputId}/regenerate`, {
+      const res = await fetch(`/api/${slug}/platform-outputs/${outputId}/regenerate`, {
         method: "POST",
       });
 

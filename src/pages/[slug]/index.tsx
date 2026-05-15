@@ -122,7 +122,7 @@ function DashboardContent() {
     setLoadingPlatforms(new Set(activePlatforms));
 
     try {
-      const response = await fetch("/api/generations", {
+      const response = await fetch(`/api/${slug}/generations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic, tone }),
@@ -223,7 +223,7 @@ function DashboardContent() {
     }));
 
     try {
-      const res = await fetch(`/api/platform-outputs/${output.platformOutputId}`, {
+      const res = await fetch(`/api/${slug}/platform-outputs/${output.platformOutputId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ editedContent: output.editedContent }),
@@ -275,7 +275,7 @@ function DashboardContent() {
 
     try {
       const res = await fetch(
-        `/api/platform-outputs/${output.platformOutputId}/regenerate`,
+        `/api/${slug}/platform-outputs/${output.platformOutputId}/regenerate`,
         { method: "POST" }
       );
 
@@ -310,7 +310,7 @@ function DashboardContent() {
     setIntendedPublishAt(date);
     if (!currentGenerationId || !date) return;
     try {
-      await fetch(`/api/generations/${currentGenerationId}`, {
+      await fetch(`/api/${slug}/generations/${currentGenerationId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ intendedPublishAt: date.toISOString() }),

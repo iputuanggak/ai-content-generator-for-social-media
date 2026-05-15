@@ -10,8 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleDelete(req: NextApiRequest, res: NextApiResponse) {
-  const slug = req.query.slug as string;
-  const ctx = await withSlugSession(req, res, slug);
+  const ctx = await withSlugSession(req, res);
   if (!ctx) return;
 
   const memberId = req.query.memberId as string;

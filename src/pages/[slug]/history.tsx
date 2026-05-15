@@ -78,13 +78,13 @@ function HistoryContent() {
     if (srch) params.set("search", srch);
     if (f) params.set("from", f);
     if (t) params.set("to", t);
-    const res = await fetch(`/api/generations?${params}`);
+    const res = await fetch(`/api/${slug}/generations?${params}`);
     if (res.ok) {
       const data = await res.json() as { items: Generation[]; total: number };
       return data;
     }
     return null;
-  }, []);
+  }, [slug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,7 +104,7 @@ function HistoryContent() {
   async function handleDelete(id: string) {
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/generations/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/${slug}/generations/${id}`, { method: "DELETE" });
       if (res.ok) {
         setDeleteId(null);
         const data = await fetchGenerations(page, search, from, to);
