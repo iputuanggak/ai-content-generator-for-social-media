@@ -44,13 +44,19 @@ export default function RegisterPage() {
 
     queryClient.removeQueries({ queryKey: ["session"] });
 
-    // If arriving from an invitation link, redirect back to accept it (skip onboarding)
+    // Send OTP and redirect to email verification
+    await fetch("/api/auth/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, purpose: "email_verification" }),
+    });
+
     const { invitationId } = router.query;
-    if (invitationId && typeof invitationId === "string") {
-      router.push(`/accept-invitation?invitationId=${invitationId}`);
-    } else {
-      router.push("/onboarding");
-    }
+    const verifyUrl =
+      invitationId && typeof invitationId === "string"
+        ? `/verify-email?email=${encodeURIComponent(email)}&invitationId=${invitationId}`
+        : `/verify-email?email=${encodeURIComponent(email)}`;
+    router.push(verifyUrl);
   }
 
   return (

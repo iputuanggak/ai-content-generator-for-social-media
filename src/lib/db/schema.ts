@@ -4,6 +4,7 @@ import {
   timestamp,
   boolean,
   pgEnum,
+  integer,
 } from "drizzle-orm/pg-core";
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -166,4 +167,21 @@ export const platformOutput = pgTable("platform_output", {
   content: text("content").notNull(),
   editedContent: text("edited_content"),
   updatedAt: timestamp("updated_at").notNull(),
+});
+
+// ─── OTP tables ───────────────────────────────────────────────────────────────
+
+export const otpPurposeEnum = pgEnum("otp_purpose", [
+  "email_verification",
+  "password_reset",
+]);
+
+export const emailOtp = pgTable("email_otp", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull(),
+  code: text("code").notNull(),
+  purpose: otpPurposeEnum("purpose").notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull(),
 });
