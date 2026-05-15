@@ -47,6 +47,18 @@ The full set of social media platforms the system can generate content for:
 - Threads
 - Pinterest
 
+### Email Verification
+A process that confirms a user's email address is real and accessible. Required after registration and after any email address change. Unverified users are blocked from accessing any protected routes until they complete verification.
+
+### OTP (One-Time Password)
+A 6-digit numeric code sent to a user's email for verification purposes. Valid for 5 minutes. Maximum 5 attempts per code before it is invalidated. Can be resent after a 60-second cooldown. Used for multiple purposes: email verification, password reset, and other confirmation flows. Stored in the `emailOtp` database table with a `purpose` enum to distinguish use cases.
+
+### Disposable Email
+A temporary email address from services like Mailinator or Guerrilla Mail, designed to be thrown away. Blocked at registration and email change to prevent spam accounts. Enforced via a static blocklist of known disposable email domains, checked on both client-side and server-side.
+
+### Email Service
+The system responsible for sending transactional emails (OTP codes). Powered by Resend with React Email templates. Sender address is configurable via the `EMAIL_FROM` environment variable.
+
 ---
 
 ## Architecture
