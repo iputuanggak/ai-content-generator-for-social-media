@@ -8,6 +8,7 @@ export interface ResolvedOrg {
   name: string;
   slug: string | null;
   role: string;
+  memberId: string;
 }
 
 export type ResolveResult =
@@ -38,7 +39,7 @@ export async function resolveSlugToOrg(
   const org = orgRows[0];
 
   const memberRows = await dbClient
-    .select({ role: member.role })
+    .select({ role: member.role, id: member.id })
     .from(member)
     .where(and(eq(member.organizationId, org.id), eq(member.userId, session.user.id)))
     .limit(1);
@@ -49,6 +50,6 @@ export async function resolveSlugToOrg(
 
   return {
     status: 200,
-    body: { id: org.id, name: org.name, slug: org.slug, role: memberRows[0].role },
+    body: { id: org.id, name: org.name, slug: org.slug, role: memberRows[0].role, memberId: memberRows[0].id },
   };
 }

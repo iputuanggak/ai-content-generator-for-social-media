@@ -13,6 +13,7 @@ export type SlugSessionContext = {
   orgId: string;
   slug: string;
   role: string;
+  memberId: string;
   headers: Headers;
 };
 
@@ -83,6 +84,7 @@ export async function withSlugSession(
     orgId: result.body.id,
     slug: result.body.slug ?? slug,
     role: result.body.role,
+    memberId: result.body.memberId,
     headers,
   };
 }
