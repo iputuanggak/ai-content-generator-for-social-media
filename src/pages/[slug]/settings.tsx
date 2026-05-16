@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { useTeam } from "@/lib/team-context";
 import type { Tone, Platform } from "@/lib/content-adapter";
-import { PLATFORM_OPTIONS } from "@/lib/platform-metadata";
+import { PLATFORM_OPTIONS, TONE_OPTIONS, MODEL_OPTIONS } from "@/lib/content-adapter";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ContentSkeleton } from "@/components/content-skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,37 +11,6 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
-
-const TONE_OPTIONS: { value: Tone; label: string }[] = [
-  { value: "professional", label: "Professional" },
-  { value: "casual", label: "Casual" },
-  { value: "humorous", label: "Humorous" },
-  { value: "inspirational", label: "Inspirational" },
-];
-
-const MODEL_OPTIONS: { group: string; models: { value: string; label: string }[] }[] = [
-  {
-    group: "Google",
-    models: [
-      { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-      { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash" },
-    ],
-  },
-  {
-    group: "OpenAI",
-    models: [
-      { value: "openai/gpt-4.1-mini", label: "GPT-4.1 Mini" },
-      { value: "openai/gpt-4.1-nano", label: "GPT-4.1 Nano" },
-    ],
-  },
-  {
-    group: "Anthropic",
-    models: [
-      { value: "anthropic/claude-3.5-haiku", label: "Claude 3.5 Haiku" },
-      { value: "anthropic/claude-3-haiku", label: "Claude 3 Haiku" },
-    ],
-  },
-];
 
 const ALL_MODEL_IDS = new Set(MODEL_OPTIONS.flatMap((g) => g.models.map((m) => m.value)));
 const DEFAULT_MODEL_ID = "google/gemini-2.5-flash";

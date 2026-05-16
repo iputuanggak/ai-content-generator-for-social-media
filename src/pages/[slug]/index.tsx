@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useTeam } from "@/lib/team-context";
 import type { Tone, Platform } from "@/lib/content-adapter";
-import { PLATFORM_LABELS } from "@/lib/platform-metadata";
+import { PLATFORM_LABELS } from "@/lib/content-adapter";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -45,12 +45,7 @@ const DEFAULT_PLATFORMS: Platform[] = [
   "pinterest",
 ];
 
-const TONE_OPTIONS: { value: Tone; label: string }[] = [
-  { value: "professional", label: "Professional" },
-  { value: "casual", label: "Casual" },
-  { value: "humorous", label: "Humorous" },
-  { value: "inspirational", label: "Inspirational" },
-];
+import { TONE_OPTIONS } from "@/lib/content-adapter";
 
 export default function DashboardPage() {
   const { loading: verifyLoading } = useRequireVerifiedEmail();

@@ -18,6 +18,59 @@ export type Platform =
 
 export type Tone = "professional" | "casual" | "humorous" | "inspirational";
 
+export const PLATFORM_LABELS: Record<Platform, string> = {
+  twitter: "Twitter / X",
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  tiktok: "TikTok",
+  youtube: "YouTube",
+  threads: "Threads",
+  pinterest: "Pinterest",
+};
+
+export const PLATFORM_OPTIONS: { value: Platform; label: string }[] = [
+  { value: "twitter", label: "Twitter / X" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "instagram", label: "Instagram" },
+  { value: "facebook", label: "Facebook" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "youtube", label: "YouTube" },
+  { value: "threads", label: "Threads" },
+  { value: "pinterest", label: "Pinterest" },
+];
+
+export const TONE_OPTIONS: { value: Tone; label: string }[] = [
+  { value: "professional", label: "Professional" },
+  { value: "casual", label: "Casual" },
+  { value: "humorous", label: "Humorous" },
+  { value: "inspirational", label: "Inspirational" },
+];
+
+export const MODEL_OPTIONS: { group: string; models: { value: string; label: string }[] }[] = [
+  {
+    group: "Google",
+    models: [
+      { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+      { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash" },
+    ],
+  },
+  {
+    group: "OpenAI",
+    models: [
+      { value: "openai/gpt-4.1-mini", label: "GPT-4.1 Mini" },
+      { value: "openai/gpt-4.1-nano", label: "GPT-4.1 Nano" },
+    ],
+  },
+  {
+    group: "Anthropic",
+    models: [
+      { value: "anthropic/claude-3.5-haiku", label: "Claude 3.5 Haiku" },
+      { value: "anthropic/claude-3-haiku", label: "Claude 3 Haiku" },
+    ],
+  },
+];
+
 export interface PromptPair {
   systemPrompt: string;
   userPrompt: string;

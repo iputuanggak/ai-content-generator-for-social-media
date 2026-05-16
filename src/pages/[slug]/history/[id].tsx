@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useTeam } from "@/lib/team-context";
-import { PLATFORM_LABELS } from "@/lib/platform-metadata";
+import { PLATFORM_LABELS } from "@/lib/content-adapter";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ContentSkeleton } from "@/components/content-skeleton";
 import { toast } from "sonner";
