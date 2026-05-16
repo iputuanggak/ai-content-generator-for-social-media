@@ -45,11 +45,16 @@ export default function RegisterPage() {
     queryClient.removeQueries({ queryKey: ["session"] });
 
     // Send OTP and redirect to email verification
-    await fetch("/api/auth/send-otp", {
+    const otpRes = await fetch("/api/auth/send-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, purpose: "email_verification" }),
     });
+
+    if (!otpRes.ok) {
+      setLoading(false);
+      setError("Account created, but we couldn't send the verification email. Please try resending from the next page.");
+    }
 
     const { invitationId } = router.query;
     const verifyUrl =

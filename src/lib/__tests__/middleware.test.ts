@@ -9,7 +9,7 @@ const SESSION_COOKIES = [
 
 const AUTH_ROUTES = ["/login", "/register"];
 
-const EXCLUDED_PREFIXES = ["/api", "/_next", "/onboarding", "/accept-invitation", "/teams", "/favicon.ico"];
+const EXCLUDED_PREFIXES = ["/api", "/_next", "/verify-email", "/onboarding", "/accept-invitation", "/teams", "/favicon.ico"];
 
 function middlewareLogic(
   pathname: string,

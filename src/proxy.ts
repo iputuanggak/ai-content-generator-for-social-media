@@ -12,6 +12,7 @@ const EXCLUDED_PREFIXES = [
   "/_next",
   "/login",
   "/register",
+  "/verify-email",
   "/onboarding",
   "/accept-invitation",
   "/teams",
@@ -76,7 +77,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: "/((?!api/|_next/|login|register|onboarding|accept-invitation|teams|favicon\\.ico).*)",
+      source: "/((?!api/|_next/|login|register|verify-email|onboarding|accept-invitation|teams|favicon\\.ico).*)",
     },
   ],
 };
