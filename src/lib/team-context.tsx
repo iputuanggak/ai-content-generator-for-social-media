@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
 
@@ -13,6 +13,10 @@ interface TeamData {
 
 interface TeamContextValue extends TeamData {
   loading: boolean;
+  sessionLoaded: boolean;
+  sessionError: boolean;
+  teamLoaded: boolean;
+  teamData: { id: string; name: string; slug: string } | null;
 }
 
 const TeamContext = createContext<TeamContextValue | null>(null);
@@ -45,18 +49,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  if (!sessionLoading && sessionData && !sessionData.session) {
-    router.push("/login");
-  }
-
-  if (sessionError && !sessionData) {
-    router.push("/login");
-  }
-
-  if (slug && !teamLoading && sessionData?.session && !teamData) {
-    router.push("/teams");
-  }
-
   const value: TeamContextValue = sessionData?.session
     ? {
         userName: sessionData.userName ?? "",
@@ -66,6 +58,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         slug: slug ?? null,
         teams: sessionData.teams ?? [],
         loading: sessionLoading || (!!slug && teamLoading),
+        sessionLoaded: !sessionLoading,
+        sessionError,
+        teamLoaded: !teamLoading,
+        teamData: teamData ?? null,
       }
     : {
         userName: "",
@@ -75,6 +71,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         slug: null,
         teams: [],
         loading: sessionLoading,
+        sessionLoaded: !sessionLoading,
+        sessionError,
+        teamLoaded: !teamLoading,
+        teamData: null,
       };
 
   return (
@@ -90,4 +90,27 @@ export function useTeam(): TeamContextValue {
     throw new Error("useTeam must be used within a TeamProvider");
   }
   return ctx;
+}
+
+export function useTeamGuard() {
+  const router = useRouter();
+  const ctx = useContext(TeamContext);
+  if (!ctx) {
+    throw new Error("useTeamGuard must be used within a TeamProvider");
+  }
+  const { sessionLoaded, sessionError, userId, slug, teamLoaded, teamData } = ctx;
+
+  useEffect(() => {
+    if (sessionLoaded && !userId) {
+      router.push("/login");
+      return;
+    }
+    if (sessionError) {
+      router.push("/login");
+      return;
+    }
+    if (slug && teamLoaded && userId && !teamData) {
+      router.push("/teams");
+    }
+  }, [sessionLoaded, sessionError, userId, slug, teamLoaded, teamData, router]);
 }

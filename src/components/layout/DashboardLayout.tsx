@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import { TeamProvider } from "@/lib/team-context";
+import { TeamProvider, useTeamGuard } from "@/lib/team-context";
 import { Sidebar } from "./Sidebar";
 import { MobileDrawer } from "./MobileDrawer";
 
@@ -9,6 +9,7 @@ interface DashboardLayoutProps {
 }
 
 function DashboardLayoutInner({ children }: DashboardLayoutProps) {
+  useTeamGuard();
   return (
     <div className="min-h-screen bg-zinc-50">
       <aside className="fixed inset-y-0 left-0 hidden w-60 md:block">
