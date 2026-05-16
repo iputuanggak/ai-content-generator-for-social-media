@@ -4,7 +4,6 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useTeam } from "@/lib/team-context";
 import type { Tone, Platform } from "@/lib/content-adapter";
 import { PLATFORM_LABELS } from "@/lib/content-adapter";
-import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -18,15 +17,7 @@ import { DateTimePicker } from "@/components/date-time-picker";
 import { PlatformOutputCard } from "@/components/platform-output-card";
 import { ContentSkeleton } from "@/components/content-skeleton";
 import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
-
-interface PlatformOutputState {
-  platformOutputId: string;
-  content: string;
-  editedContent: string;
-  savedContent: string;
-  isSaving: boolean;
-  isRegenerating: boolean;
-}
+import { usePlatformOutputActions } from "@/lib/use-platform-output-actions";
 
 interface BrandSettingsData {
   defaultTone: Tone;
@@ -68,12 +59,23 @@ function DashboardContent() {
   const toneDetermined = useRef(false);
   const [tone, setTone] = useState<Tone>(DEFAULT_TONE);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [outputs, setOutputs] = useState<Record<string, PlatformOutputState>>({});
+  // Maps platform name → platformOutputId (for routing actions to hook)
+  const [platformToOutputId, setPlatformToOutputId] = useState<Record<string, string>>({});
   const [loadingPlatforms, setLoadingPlatforms] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
   const [intendedPublishAt, setIntendedPublishAt] = useState<Date | undefined>(undefined);
   const [isSavingPublishDate, setIsSavingPublishDate] = useState(false);
+
+  const {
+    outputStates,
+    initOutputState,
+    setEditedContent,
+    handleSave: hookHandleSave,
+    handleRegenerate: hookHandleRegenerate,
+    handleCopy: hookHandleCopy,
+    handlePublishDateChange: hookHandlePublishDateChange,
+  } = usePlatformOutputActions(slug ?? "", currentGenerationId ?? "");
 
   const brandSettingsLoading = !brandSettingsLoaded && (teamLoading || !!teamId);
 
@@ -113,7 +115,7 @@ function DashboardContent() {
     if (!topic.trim()) return;
 
     setIsGenerating(true);
-    setOutputs({});
+    setPlatformToOutputId({});
     setError(null);
     setCurrentGenerationId(null);
     setIntendedPublishAt(undefined);
@@ -174,17 +176,9 @@ function DashboardContent() {
               if (parsed.generationId) {
                 setCurrentGenerationId(parsed.generationId);
               }
-              setOutputs((prev) => ({
-                    ...prev,
-                    [parsed.platform!]: {
-                      platformOutputId: parsed.platformOutputId!,
-                      content: parsed.content!,
-                      editedContent: parsed.content!,
-                      savedContent: parsed.content!,
-                      isSaving: false,
-                      isRegenerating: false,
-                    },
-                  }));
+              const oid = parsed.platformOutputId;
+              initOutputState(oid, parsed.content);
+              setPlatformToOutputId((prev) => ({ ...prev, [parsed.platform!]: oid }));
               setLoadingPlatforms((prev) => {
                 const next = new Set(prev);
                 next.delete(parsed.platform!);
@@ -204,122 +198,21 @@ function DashboardContent() {
     }
   }
 
-  function handleEditContent(platform: string, value: string) {
-    setOutputs((prev) => ({
-      ...prev,
-      [platform]: { ...prev[platform], editedContent: value },
-    }));
-  }
-
-  async function handleSave(platform: string) {
-    const output = outputs[platform];
-    if (!output) return;
-
-    setOutputs((prev) => ({
-      ...prev,
-      [platform]: { ...prev[platform], isSaving: true },
-    }));
-
-    try {
-      const res = await fetch(`/api/${slug}/platform-outputs/${output.platformOutputId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ editedContent: output.editedContent }),
-      });
-
-      if (res.ok) {
-        setOutputs((prev) => ({
-          ...prev,
-          [platform]: {
-            ...prev[platform],
-            savedContent: output.editedContent,
-            isSaving: false,
-          },
-        }));
-        toast("Changes saved");
-      } else {
-        setOutputs((prev) => ({
-          ...prev,
-          [platform]: { ...prev[platform], isSaving: false },
-        }));
-      }
-    } catch {
-      setOutputs((prev) => ({
-        ...prev,
-        [platform]: { ...prev[platform], isSaving: false },
-      }));
-    }
-  }
-
-  async function handleCopy(platform: string) {
-    const output = outputs[platform];
-    if (!output) return;
-    try {
-      await navigator.clipboard.writeText(output.editedContent);
-      toast("Copied to clipboard");
-    } catch {
-      // clipboard access denied — silently fail
-    }
-  }
-
-  async function handleRegenerate(platform: string) {
-    const output = outputs[platform];
-    if (!output) return;
-
-    setOutputs((prev) => ({
-      ...prev,
-      [platform]: { ...prev[platform], isRegenerating: true },
-    }));
-
-    try {
-      const res = await fetch(
-        `/api/${slug}/platform-outputs/${output.platformOutputId}/regenerate`,
-        { method: "POST" }
-      );
-
-      if (res.ok) {
-        const data = await res.json() as { id: string; content: string };
-        setOutputs((prev) => ({
-          ...prev,
-          [platform]: {
-            ...prev[platform],
-            content: data.content,
-            editedContent: data.content,
-            savedContent: data.content,
-            isRegenerating: false,
-          },
-        }));
-        toast("Content regenerated");
-      } else {
-        setOutputs((prev) => ({
-          ...prev,
-          [platform]: { ...prev[platform], isRegenerating: false },
-        }));
-      }
-    } catch {
-      setOutputs((prev) => ({
-        ...prev,
-        [platform]: { ...prev[platform], isRegenerating: false },
-      }));
-    }
-  }
-
   async function handlePublishDateChange(date: Date | undefined) {
     setIntendedPublishAt(date);
     if (!currentGenerationId || !date) return;
+    setIsSavingPublishDate(true);
     try {
-      await fetch(`/api/${slug}/generations/${currentGenerationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intendedPublishAt: date.toISOString() }),
-      });
+      await hookHandlePublishDateChange(date);
     } finally {
       setIsSavingPublishDate(false);
     }
   }
 
-  const hasResults = Object.keys(outputs).length > 0;
+  const hasResults = Object.keys(platformToOutputId).length > 0;
   const showResultsArea = isGenerating || hasResults;
+
+
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -435,7 +328,8 @@ function DashboardContent() {
 
                 <div className="grid gap-5 sm:grid-cols-2">
                   {activePlatforms.map((platform) => {
-                    const output = outputs[platform];
+                    const oid = platformToOutputId[platform];
+                    const output = oid ? outputStates[oid] : undefined;
                     const isLoading = loadingPlatforms.has(platform) || (output ? output.isRegenerating : false);
                     const hasUnsavedChanges =
                       output && output.editedContent !== output.savedContent;
@@ -445,10 +339,10 @@ function DashboardContent() {
                         key={platform}
                         platformName={PLATFORM_LABELS[platform]}
                         content={output?.editedContent ?? ""}
-                        onChange={(value) => handleEditContent(platform, value)}
-                        onCopy={() => handleCopy(platform)}
-                        onSave={() => handleSave(platform)}
-                        onRegenerate={() => handleRegenerate(platform)}
+                        onChange={(value) => oid && setEditedContent(oid, value)}
+                        onCopy={() => oid && hookHandleCopy(oid)}
+                        onSave={() => oid && hookHandleSave(oid)}
+                        onRegenerate={() => oid && hookHandleRegenerate(oid)}
                         loading={isLoading}
                         hasUnsavedChanges={hasUnsavedChanges}
                         isSaving={output?.isSaving}

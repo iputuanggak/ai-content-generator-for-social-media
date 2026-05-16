@@ -5,10 +5,10 @@ import { useTeam } from "@/lib/team-context";
 import { PLATFORM_LABELS } from "@/lib/content-adapter";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ContentSkeleton } from "@/components/content-skeleton";
-import { toast } from "sonner";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { PlatformOutputCard } from "@/components/platform-output-card";
 import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
+import { usePlatformOutputActions } from "@/lib/use-platform-output-actions";
 
 interface PlatformOutputData {
   id: string;
@@ -23,13 +23,6 @@ interface GenerationData {
   tone: string;
   intendedPublishAt: string | null;
   createdAt: string;
-}
-
-interface OutputState {
-  editedContent: string;
-  savedContent: string;
-  isSaving: boolean;
-  isRegenerating: boolean;
 }
 
 export default function HistoryDetailPage() {
@@ -55,7 +48,15 @@ function HistoryDetailContent() {
   const [intendedPublishAt, setIntendedPublishAt] = useState<Date | undefined>(undefined);
   const [isSavingPublishDate, setIsSavingPublishDate] = useState(false);
 
-  const [outputs, setOutputs] = useState<Record<string, OutputState>>({});
+  const {
+    outputStates: outputs,
+    setOutputStates: setOutputs,
+    setEditedContent,
+    handleSave,
+    handleRegenerate,
+    handleCopy,
+    handlePublishDateChange: hookHandlePublishDateChange,
+  } = usePlatformOutputActions(slug ?? "", gen?.id ?? "");
 
   useEffect(() => {
     if (!id || !slug) return;
@@ -83,7 +84,7 @@ function HistoryDetailContent() {
         setIntendedPublishAt(g.intendedPublishAt ? new Date(g.intendedPublishAt) : undefined);
         setPlatformOutputs(pos);
 
-        const init: Record<string, OutputState> = {};
+        const init: Record<string, { editedContent: string; savedContent: string; isSaving: boolean; isRegenerating: boolean }> = {};
         for (const po of pos) {
           const current = po.editedContent ?? po.content;
           init[po.id] = {
@@ -126,112 +127,9 @@ function HistoryDetailContent() {
     if (!gen) return;
     setIsSavingPublishDate(true);
     try {
-      await fetch(`/api/${slug}/generations/${gen.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intendedPublishAt: date ? date.toISOString() : null }),
-      });
+      await hookHandlePublishDateChange(date);
     } finally {
       setIsSavingPublishDate(false);
-    }
-  }
-
-  function handleEditContent(outputId: string, value: string) {
-    setOutputs((prev) => ({
-      ...prev,
-      [outputId]: { ...prev[outputId], editedContent: value },
-    }));
-  }
-
-  async function handleSave(outputId: string) {
-    const output = outputs[outputId];
-    if (!output) return;
-
-    setOutputs((prev) => ({
-      ...prev,
-      [outputId]: { ...prev[outputId], isSaving: true },
-    }));
-
-    try {
-      const res = await fetch(`/api/${slug}/platform-outputs/${outputId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ editedContent: output.editedContent }),
-      });
-
-      if (res.ok) {
-        setOutputs((prev) => ({
-          ...prev,
-          [outputId]: {
-            ...prev[outputId],
-            savedContent: output.editedContent,
-            isSaving: false,
-          },
-        }));
-        toast("Changes saved");
-      } else {
-        setOutputs((prev) => ({
-          ...prev,
-          [outputId]: { ...prev[outputId], isSaving: false },
-        }));
-        toast.error("Failed to save changes");
-      }
-    } catch {
-      setOutputs((prev) => ({
-        ...prev,
-        [outputId]: { ...prev[outputId], isSaving: false },
-      }));
-      toast.error("Failed to save changes");
-    }
-  }
-
-  async function handleRegenerate(outputId: string) {
-    setOutputs((prev) => ({
-      ...prev,
-      [outputId]: { ...prev[outputId], isRegenerating: true },
-    }));
-
-    try {
-      const res = await fetch(`/api/${slug}/platform-outputs/${outputId}/regenerate`, {
-        method: "POST",
-      });
-
-      if (res.ok) {
-        const data = await res.json() as { id: string; content: string };
-        setOutputs((prev) => ({
-          ...prev,
-          [outputId]: {
-            ...prev[outputId],
-            editedContent: data.content,
-            savedContent: data.content,
-            isRegenerating: false,
-          },
-        }));
-        toast("Content regenerated");
-      } else {
-        setOutputs((prev) => ({
-          ...prev,
-          [outputId]: { ...prev[outputId], isRegenerating: false },
-        }));
-        toast.error("Regeneration failed");
-      }
-    } catch {
-      setOutputs((prev) => ({
-        ...prev,
-        [outputId]: { ...prev[outputId], isRegenerating: false },
-      }));
-      toast.error("Regeneration failed");
-    }
-  }
-
-  async function handleCopy(outputId: string) {
-    const output = outputs[outputId];
-    if (!output) return;
-    try {
-      await navigator.clipboard.writeText(output.editedContent);
-      toast("Copied to clipboard");
-    } catch {
-      toast.error("Could not copy to clipboard");
     }
   }
 
@@ -286,7 +184,7 @@ function HistoryDetailContent() {
                     key={po.id}
                     platformName={PLATFORM_LABELS[po.platform as keyof typeof PLATFORM_LABELS] ?? po.platform}
                     content={state.editedContent}
-                    onChange={(value) => handleEditContent(po.id, value)}
+                    onChange={(value) => setEditedContent(po.id, value)}
                     onCopy={() => handleCopy(po.id)}
                     onSave={() => handleSave(po.id)}
                     onRegenerate={() => handleRegenerate(po.id)}
