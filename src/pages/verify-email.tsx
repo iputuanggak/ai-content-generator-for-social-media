@@ -22,7 +22,6 @@ export default function VerifyEmailPage() {
   const [success, setSuccess] = useState(false);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const initialCooldownStarted = useRef(false);
 
   const startCooldown = useCallback((seconds: number) => {
     setCooldown(seconds);
@@ -39,10 +38,7 @@ export default function VerifyEmailPage() {
   }, []);
 
   useEffect(() => {
-    if (!initialCooldownStarted.current) {
-      initialCooldownStarted.current = true;
-      startCooldown(60);
-    }
+    startCooldown(60);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -195,13 +191,9 @@ export default function VerifyEmailPage() {
         <div className="mt-4 text-center">
           {cooldown > 0 ? (
             <p className="text-sm text-muted-foreground">
-              Resend code in{" "}
-              <span
-                key={cooldown}
-                className="inline-block font-medium text-foreground tabular-nums [animation:flip-number_0.4s_ease-out] [perspective:200px]"
-              >
-                {cooldown}s
-              </span>
+              Wait{" "}
+              <span className="font-medium text-foreground tabular-nums">{cooldown}s</span>{" "}
+              to resend code
             </p>
           ) : (
             <button
@@ -229,22 +221,6 @@ export default function VerifyEmailPage() {
           </Button>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes flip-number {
-          0% {
-            transform: rotateX(-90deg);
-            opacity: 0;
-          }
-          50% {
-            opacity: 1;
-          }
-          100% {
-            transform: rotateX(0deg);
-            opacity: 1;
-          }
-        }
-      `}</style>
     </div>
   );
 }
