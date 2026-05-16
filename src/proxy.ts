@@ -72,6 +72,12 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     if (session.user.emailVerified) {
+      const invitationId = request.nextUrl.searchParams.get("invitationId");
+      if (invitationId) {
+        return NextResponse.redirect(
+          new URL(`/accept-invitation?invitationId=${invitationId}`, request.url),
+        );
+      }
       const destination = await getSmartRedirect(request.headers);
       return NextResponse.redirect(new URL(destination, request.url));
     }

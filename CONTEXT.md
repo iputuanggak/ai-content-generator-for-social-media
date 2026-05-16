@@ -56,8 +56,11 @@ A 6-digit numeric code sent to a user's email for verification purposes. Valid f
 ### Disposable Email
 A temporary email address from services like Mailinator or Guerrilla Mail, designed to be thrown away. Blocked at registration and email change to prevent spam accounts. Enforced via a static blocklist of known disposable email domains, checked on both client-side and server-side.
 
+### Invitation
+A request sent by a Team admin or owner to an email address, inviting the recipient to join the Team as a Member. Contains the invitee's email, the assigned role, a status (`pending`/`accepted`/`expired`/`cancelled`), and an expiration timestamp. Delivered via email with a link to `/accept-invitation`. Managed by Better Auth's organization plugin.
+
 ### Email Service
-The system responsible for sending transactional emails (OTP codes). Powered by Resend with React Email templates. Sender address is configurable via the `EMAIL_FROM` environment variable.
+The system responsible for sending transactional emails (OTP codes, invitation emails). Powered by Resend with React Email templates. Sender address is configurable via the `EMAIL_FROM` environment variable.
 
 ---
 
