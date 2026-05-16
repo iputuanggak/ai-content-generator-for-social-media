@@ -33,6 +33,10 @@ vi.mock("@/lib/team-context", () => ({
   useTeam: () => teamContextValue,
 }));
 
+vi.mock("@/lib/use-require-verified-email", () => ({
+  useRequireVerifiedEmail: () => ({ loading: false }),
+}));
+
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 

@@ -3,10 +3,12 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
 
 export default function AcceptInvitationPage() {
   const router = useRouter();
   const { invitationId } = router.query;
+  const { loading: verifyLoading } = useRequireVerifiedEmail();
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
@@ -16,6 +18,8 @@ export default function AcceptInvitationPage() {
       setIsLoggedIn(!!result.data?.user);
     });
   }, []);
+
+  if (verifyLoading) return null;
 
   async function handleAccept() {
     if (!invitationId || typeof invitationId !== "string") return;

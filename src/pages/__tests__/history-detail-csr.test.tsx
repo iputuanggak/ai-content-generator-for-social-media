@@ -17,6 +17,10 @@ vi.mock("@/lib/team-context", () => ({
   useTeam: () => mockTeamContext,
 }));
 
+vi.mock("@/lib/use-require-verified-email", () => ({
+  useRequireVerifiedEmail: () => ({ loading: false }),
+}));
+
 vi.mock("@/components/layout/DashboardLayout", () => ({
   DashboardLayout: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="layout">{children}</div>
@@ -43,13 +47,13 @@ const mockGeneration = {
 };
 
 const mockFetch = vi.fn((url: string) => {
-  if (typeof url === "string" && url.includes("/api/generations/gen-1")) {
+  if (typeof url === "string" && url.includes("/generations/gen-1") && !url.includes("regenerate")) {
     return Promise.resolve({ ok: true, json: () => Promise.resolve(mockGeneration) });
   }
-  if (typeof url === "string" && url.includes("/api/generations/gen-404")) {
+  if (typeof url === "string" && url.includes("/generations/gen-404")) {
     return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({ error: "Not found" }) });
   }
-  if (typeof url === "string" && url.includes("/api/generations/gen-403")) {
+  if (typeof url === "string" && url.includes("/generations/gen-403")) {
     return Promise.resolve({ ok: false, status: 403, json: () => Promise.resolve({ error: "Forbidden" }) });
   }
   return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
@@ -89,7 +93,7 @@ describe("HistoryDetailPage CSR conversion", () => {
   it("fetches generation data from API on mount", async () => {
     render(<HistoryDetailPage />);
     await screen.findByText("Summer sale campaign");
-    expect(mockFetch).toHaveBeenCalledWith("/api/generations/gen-1");
+    expect(mockFetch).toHaveBeenCalledWith("/api/acme/generations/gen-1");
   });
 
   it("displays generation topic and tone", async () => {

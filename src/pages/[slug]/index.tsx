@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { PlatformOutputCard } from "@/components/platform-output-card";
 import { ContentSkeleton } from "@/components/content-skeleton";
+import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
 
 interface PlatformOutputState {
   platformOutputId: string;
@@ -52,6 +53,8 @@ const TONE_OPTIONS: { value: Tone; label: string }[] = [
 ];
 
 export default function DashboardPage() {
+  const { loading: verifyLoading } = useRequireVerifiedEmail();
+  if (verifyLoading) return null;
   return (
     <DashboardLayout>
       <DashboardContent />

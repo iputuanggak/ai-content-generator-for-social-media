@@ -11,6 +11,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
 
 const TONE_OPTIONS: { value: Tone; label: string }[] = [
   { value: "professional", label: "Professional" },
@@ -20,6 +21,8 @@ const TONE_OPTIONS: { value: Tone; label: string }[] = [
 ];
 
 export default function SettingsPage() {
+  const { loading: verifyLoading } = useRequireVerifiedEmail();
+  if (verifyLoading) return null;
   return (
     <DashboardLayout>
       <SettingsContent />

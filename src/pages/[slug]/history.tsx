@@ -16,6 +16,7 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from "@/components/ui/pagination";
+import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
 
 interface Generation {
   id: string;
@@ -54,6 +55,8 @@ function capitalize(s: string) {
 }
 
 export default function HistoryPage() {
+  const { loading: verifyLoading } = useRequireVerifiedEmail();
+  if (verifyLoading) return null;
   return (
     <DashboardLayout>
       <HistoryContent />

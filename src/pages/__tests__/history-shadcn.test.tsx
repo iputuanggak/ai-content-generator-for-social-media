@@ -18,6 +18,14 @@ vi.mock("@/lib/team-context", () => ({
   useTeam: () => mockTeamContext,
 }));
 
+vi.mock("@/lib/use-require-verified-email", () => ({
+  useRequireVerifiedEmail: () => ({ loading: false }),
+}));
+
+vi.mock("next/router", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock("@/components/layout/DashboardLayout", () => ({
   DashboardLayout: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="layout">{children}</div>

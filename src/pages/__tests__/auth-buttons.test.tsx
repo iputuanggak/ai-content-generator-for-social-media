@@ -12,11 +12,16 @@ vi.mock("@/lib/auth-client", () => ({
     signIn: { email: vi.fn().mockResolvedValue({ error: null }) },
     signUp: { email: vi.fn().mockResolvedValue({ error: null }) },
     getSession: vi.fn().mockResolvedValue({ data: { user: { id: "1" } } }),
+    useSession: () => ({ data: { user: { emailVerified: true } }, isPending: false }),
     organization: {
       create: vi.fn().mockResolvedValue({ error: null }),
       acceptInvitation: vi.fn().mockResolvedValue({ error: null }),
     },
   },
+}));
+
+vi.mock("@/lib/use-require-verified-email", () => ({
+  useRequireVerifiedEmail: () => ({ loading: false }),
 }));
 
 vi.mock("next/router", () => ({

@@ -8,6 +8,7 @@ import { ContentSkeleton } from "@/components/content-skeleton";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
 
 interface MemberData {
   id: string;
@@ -22,6 +23,8 @@ interface MemberData {
 }
 
 export default function MembersPage() {
+  const { loading: verifyLoading } = useRequireVerifiedEmail();
+  if (verifyLoading) return null;
   return (
     <DashboardLayout>
       <MembersContent />

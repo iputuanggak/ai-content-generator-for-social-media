@@ -8,6 +8,7 @@ import { ContentSkeleton } from "@/components/content-skeleton";
 import { toast } from "sonner";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { PlatformOutputCard } from "@/components/platform-output-card";
+import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
 
 interface PlatformOutputData {
   id: string;
@@ -32,6 +33,8 @@ interface OutputState {
 }
 
 export default function HistoryDetailPage() {
+  const { loading: verifyLoading } = useRequireVerifiedEmail();
+  if (verifyLoading) return null;
   return (
     <DashboardLayout>
       <HistoryDetailContent />

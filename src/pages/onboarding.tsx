@@ -6,12 +6,16 @@ import { Button } from "@/components/ui/button";
 import type { GetServerSideProps } from "next";
 import { auth } from "@/lib/auth";
 import { generateSlug, sanitizeSlug } from "@/lib/slug";
+import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { loading: verifyLoading } = useRequireVerifiedEmail();
   const [teamName, setTeamName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  if (verifyLoading) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
