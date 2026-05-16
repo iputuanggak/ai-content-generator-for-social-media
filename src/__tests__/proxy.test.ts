@@ -13,7 +13,6 @@ const EXCLUDED_PREFIXES = [
   "/_next",
   "/login",
   "/register",
-  "/verify-email",
   "/onboarding",
   "/accept-invitation",
   "/teams",
@@ -59,6 +58,7 @@ async function proxyLogic({
   cookies,
   resolveSlug,
   listOrganizations,
+  getSession,
 }: {
   pathname: string;
   cookies: CookieValue[];
@@ -69,6 +69,9 @@ async function proxyLogic({
   listOrganizations: () => Promise<
     Array<{ id: string; slug: string | null }>
   >;
+  getSession: () => Promise<{
+    user: { emailVerified: boolean };
+  } | null>;
 }): Promise<{
   action: "next" | "redirect";
   destination?: string;
@@ -77,6 +80,23 @@ async function proxyLogic({
   if (AUTH_PAGES.includes(pathname)) {
     const hasSession = cookies.some((c) => SESSION_COOKIES.includes(c.name));
     if (hasSession) {
+      const orgs = await listOrganizations();
+      const destination = getSmartRedirectLogic(orgs);
+      return { action: "redirect", destination };
+    }
+    return { action: "next" };
+  }
+
+  if (pathname === "/verify-email" || pathname.startsWith("/verify-email/")) {
+    const hasSession = cookies.some((c) => SESSION_COOKIES.includes(c.name));
+    if (!hasSession) {
+      return { action: "redirect", destination: "/login" };
+    }
+    const session = await getSession();
+    if (!session) {
+      return { action: "redirect", destination: "/login" };
+    }
+    if (session.user.emailVerified) {
       const orgs = await listOrganizations();
       const destination = getSmartRedirectLogic(orgs);
       return { action: "redirect", destination };
@@ -142,7 +162,6 @@ describe("proxy auth gate", () => {
       "/_next/static/chunk.js",
       "/login",
       "/register",
-      "/verify-email",
       "/onboarding",
       "/accept-invitation",
       "/teams",
@@ -154,6 +173,7 @@ describe("proxy auth gate", () => {
         cookies: [],
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: false } }),
       });
       expect(result.action).toBe("next");
     });
@@ -166,6 +186,7 @@ describe("proxy auth gate", () => {
         cookies: [],
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
+        getSession: async () => null,
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/login");
@@ -177,6 +198,7 @@ describe("proxy auth gate", () => {
         cookies: [],
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
+        getSession: async () => null,
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/login");
@@ -188,6 +210,7 @@ describe("proxy auth gate", () => {
         cookies: [{ name: "better-auth.session_token.0", value: "chunk" }],
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("next");
     });
@@ -203,6 +226,7 @@ describe("proxy auth gate", () => {
           body: { error: "Team not found" },
         }),
         listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/teams");
@@ -217,6 +241,7 @@ describe("proxy auth gate", () => {
           body: { error: "Team not found" },
         }),
         listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/teams");
@@ -231,6 +256,7 @@ describe("proxy auth gate", () => {
           body: { error: "Unauthorized" },
         }),
         listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/login");
@@ -244,6 +270,7 @@ describe("proxy auth gate", () => {
         cookies: validCookies,
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("next");
     });
@@ -254,6 +281,7 @@ describe("proxy auth gate", () => {
         cookies: validCookies,
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("next");
     });
@@ -264,6 +292,7 @@ describe("proxy auth gate", () => {
         cookies: validCookies,
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("next");
     });
@@ -277,6 +306,7 @@ describe("proxy auth gate", () => {
           body: { id: "org-42", slug: "acme-marketing", role: "member" },
         }),
         listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("next");
       expect(result.headers).toEqual({
@@ -297,6 +327,7 @@ describe("proxy auth gate", () => {
           { id: "org-1", slug: "acme" },
           { id: "org-2", slug: "beta" },
         ],
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/teams");
@@ -311,6 +342,7 @@ describe("proxy auth gate", () => {
           { id: "org-1", slug: "acme" },
           { id: "org-2", slug: "beta" },
         ],
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/teams");
@@ -324,6 +356,7 @@ describe("proxy auth gate", () => {
         listOrganizations: async () => [
           { id: "org-1", slug: "acme-marketing" },
         ],
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/acme-marketing");
@@ -335,6 +368,7 @@ describe("proxy auth gate", () => {
         cookies: validCookies,
         resolveSlug: async () => resolvedOrg,
         listOrganizations: async () => [],
+        getSession: async () => ({ user: { emailVerified: true } }),
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/onboarding");
@@ -346,6 +380,7 @@ describe("proxy auth gate", () => {
         cookies: [],
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
+        getSession: async () => null,
       });
       expect(result.action).toBe("next");
     });
@@ -356,21 +391,101 @@ describe("proxy auth gate", () => {
         cookies: [],
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
+        getSession: async () => null,
       });
       expect(result.action).toBe("next");
     });
 
     it("does not redirect other excluded paths with session cookie", async () => {
-      const otherPaths = ["/api", "/_next/static/chunk.js", "/verify-email", "/onboarding", "/favicon.ico"];
+      const otherPaths = ["/api", "/_next/static/chunk.js", "/onboarding", "/favicon.ico"];
       for (const pathname of otherPaths) {
         const result = await proxyLogic({
           pathname,
           cookies: validCookies,
           resolveSlug: async () => resolvedOrg,
           listOrganizations: defaultListOrganizations,
+          getSession: async () => ({ user: { emailVerified: true } }),
         });
         expect(result.action).toBe("next");
       }
+    });
+  });
+
+  describe("verify-email guard", () => {
+    it("redirects unauthenticated user to /login", async () => {
+      const result = await proxyLogic({
+        pathname: "/verify-email",
+        cookies: [],
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
+        getSession: async () => null,
+      });
+      expect(result.action).toBe("redirect");
+      expect(result.destination).toBe("/login");
+    });
+
+    it("redirects verified user with 0 teams to /onboarding", async () => {
+      const result = await proxyLogic({
+        pathname: "/verify-email",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: async () => [],
+        getSession: async () => ({ user: { emailVerified: true } }),
+      });
+      expect(result.action).toBe("redirect");
+      expect(result.destination).toBe("/onboarding");
+    });
+
+    it("redirects verified user with 1 team to /:slug", async () => {
+      const result = await proxyLogic({
+        pathname: "/verify-email",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: async () => [
+          { id: "org-1", slug: "acme-marketing" },
+        ],
+        getSession: async () => ({ user: { emailVerified: true } }),
+      });
+      expect(result.action).toBe("redirect");
+      expect(result.destination).toBe("/acme-marketing");
+    });
+
+    it("redirects verified user with multiple teams to /teams", async () => {
+      const result = await proxyLogic({
+        pathname: "/verify-email",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: async () => [
+          { id: "org-1", slug: "acme" },
+          { id: "org-2", slug: "beta" },
+        ],
+        getSession: async () => ({ user: { emailVerified: true } }),
+      });
+      expect(result.action).toBe("redirect");
+      expect(result.destination).toBe("/teams");
+    });
+
+    it("allows unverified user to access /verify-email", async () => {
+      const result = await proxyLogic({
+        pathname: "/verify-email",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: false } }),
+      });
+      expect(result.action).toBe("next");
+    });
+
+    it("redirects to /login when session cookie exists but getSession returns null", async () => {
+      const result = await proxyLogic({
+        pathname: "/verify-email",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
+        getSession: async () => null,
+      });
+      expect(result.action).toBe("redirect");
+      expect(result.destination).toBe("/login");
     });
   });
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { resolveSlugToOrg } from "@/lib/resolve-slug";
 import { SLUG_DENYLIST } from "@/lib/slug";
 import { getSmartRedirect } from "@/lib/smart-redirect";
@@ -13,7 +14,6 @@ const EXCLUDED_PREFIXES = [
   "/_next",
   "/login",
   "/register",
-  "/verify-email",
   "/onboarding",
   "/accept-invitation",
   "/teams",
@@ -46,6 +46,24 @@ export async function proxy(request: NextRequest) {
 
   if (AUTH_PAGES.includes(pathname)) {
     if (hasSessionCookie(request)) {
+      const destination = await getSmartRedirect(request.headers);
+      return NextResponse.redirect(new URL(destination, request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (
+    pathname === "/verify-email" ||
+    pathname.startsWith("/verify-email/")
+  ) {
+    if (!hasSessionCookie(request)) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (session.user.emailVerified) {
       const destination = await getSmartRedirect(request.headers);
       return NextResponse.redirect(new URL(destination, request.url));
     }
@@ -88,7 +106,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: "/((?!api/|_next/|login|register|verify-email|onboarding|accept-invitation|teams|favicon\\.ico).*)",
+      source: "/((?!api/|_next/|login|register|onboarding|accept-invitation|teams|favicon\\.ico).*)",
     },
   ],
 };
