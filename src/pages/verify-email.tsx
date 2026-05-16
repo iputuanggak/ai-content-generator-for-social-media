@@ -1,15 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { getSmartRedirectLogic } from "@/lib/smart-redirect";
 import { authClient } from "@/lib/auth-client";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { email: queryEmail, invitationId } = router.query;
-  const { data: sessionData } = authClient.useSession();
+  const { data: sessionData, refetch: refetchSession } = authClient.useSession();
 
   const email =
     queryEmail && typeof queryEmail === "string"
@@ -24,6 +22,7 @@ export default function VerifyEmailPage() {
   const [success, setSuccess] = useState(false);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const initialCooldownStarted = useRef(false);
 
   const startCooldown = useCallback((seconds: number) => {
     setCooldown(seconds);
@@ -40,10 +39,14 @@ export default function VerifyEmailPage() {
   }, []);
 
   useEffect(() => {
+    if (!initialCooldownStarted.current) {
+      initialCooldownStarted.current = true;
+      startCooldown(60);
+    }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, []);
+  }, [startCooldown]);
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
@@ -62,7 +65,7 @@ export default function VerifyEmailPage() {
 
     if (res.ok) {
       setSuccess(true);
-      queryClient.removeQueries({ queryKey: ["session"] });
+      await refetchSession();
       if (invitationId && typeof invitationId === "string") {
         router.push(`/accept-invitation?invitationId=${invitationId}`);
         return;
@@ -146,6 +149,13 @@ export default function VerifyEmailPage() {
           Enter it below to verify your account.
         </p>
 
+        <div className="mb-4 flex items-start gap-2 rounded-lg bg-primary/5 px-3 py-2">
+          <span className="mt-0.5 text-sm text-primary">ℹ</span>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Tip:</span> Can&rsquo;t find the email? Check your spam or junk folder. It may take up to a minute to arrive.
+          </p>
+        </div>
+
         <form onSubmit={handleVerify} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="code" className="text-sm font-medium text-foreground">
@@ -186,7 +196,12 @@ export default function VerifyEmailPage() {
           {cooldown > 0 ? (
             <p className="text-sm text-muted-foreground">
               Resend code in{" "}
-              <span className="font-medium text-foreground tabular-nums">{cooldown}s</span>
+              <span
+                key={cooldown}
+                className="inline-block font-medium text-foreground tabular-nums [animation:flip-number_0.4s_ease-out] [perspective:200px]"
+              >
+                {cooldown}s
+              </span>
             </p>
           ) : (
             <button
@@ -214,6 +229,22 @@ export default function VerifyEmailPage() {
           </Button>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes flip-number {
+          0% {
+            transform: rotateX(-90deg);
+            opacity: 0;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            transform: rotateX(0deg);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }

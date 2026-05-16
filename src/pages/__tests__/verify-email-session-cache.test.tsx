@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 const mockPush = vi.fn();
-const mockRemoveQueries = vi.fn();
+const mockRefetchSession = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("next/router", () => ({
   useRouter: () => ({
@@ -21,6 +21,7 @@ vi.mock("@/lib/auth-client", () => ({
   authClient: {
     useSession: () => ({
       data: { user: { email: "test@example.com", emailVerified: false } },
+      refetch: mockRefetchSession,
     }),
     signOut: vi.fn().mockResolvedValue(undefined),
   },
@@ -29,14 +30,6 @@ vi.mock("@/lib/auth-client", () => ({
 vi.mock("@/lib/smart-redirect", () => ({
   getSmartRedirectLogic: () => "/teams",
 }));
-
-vi.mock("@tanstack/react-query", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
-  return {
-    ...actual,
-    useQueryClient: () => ({ removeQueries: mockRemoveQueries }),
-  };
-});
 
 import VerifyEmailPage from "../verify-email";
 
@@ -50,11 +43,11 @@ describe("VerifyEmailPage session cache", () => {
   afterEach(() => {
     cleanup();
     mockPush.mockClear();
-    mockRemoveQueries.mockClear();
+    mockRefetchSession.mockClear();
     vi.restoreAllMocks();
   });
 
-  it("invalidates session cache after successful OTP verification", async () => {
+  it("refetches Better Auth session after successful OTP verification", async () => {
     const user = userEvent.setup();
 
     vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
@@ -78,7 +71,7 @@ describe("VerifyEmailPage session cache", () => {
     await user.click(submitBtn);
 
     await waitFor(() => {
-      expect(mockRemoveQueries).toHaveBeenCalledWith({ queryKey: ["session"] });
+      expect(mockRefetchSession).toHaveBeenCalled();
     });
   });
 
