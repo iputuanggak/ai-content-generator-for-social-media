@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { platformOutput, generation } from "@/lib/db/schema";
+import { platformOutput } from "@/lib/db/schema";
 import { withSlugSession } from "@/lib/with-session";
+import { fetchPlatformOutputForOrg } from "@/lib/platform-output-ownership";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "PATCH") {
@@ -25,25 +26,11 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: "editedContent is required" });
   }
 
-  const outputRows = await db
-    .select()
-    .from(platformOutput)
-    .where(eq(platformOutput.id, id))
-    .limit(1);
-
-  const output = outputRows[0];
-  if (!output) {
+  const ownership = await fetchPlatformOutputForOrg(id, ctx.orgId);
+  if (ownership.status === "not-found") {
     return res.status(404).json({ error: "Not found" });
   }
-
-  const genRows = await db
-    .select()
-    .from(generation)
-    .where(eq(generation.id, output.generationId))
-    .limit(1);
-
-  const gen = genRows[0];
-  if (!gen || gen.organizationId !== ctx.orgId) {
+  if (ownership.status === "forbidden") {
     return res.status(403).json({ error: "Forbidden" });
   }
 
