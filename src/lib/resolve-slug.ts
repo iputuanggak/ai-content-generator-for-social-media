@@ -17,14 +17,15 @@ export type ResolveResult =
 
 export async function resolveSlugToOrg(
   slug: string,
-  headers: Headers
+  headers: Headers,
+  dbClient: typeof db = db
 ): Promise<ResolveResult> {
   const session = await auth.api.getSession({ headers });
   if (!session) {
     return { status: 401, body: { error: "Unauthorized" } };
   }
 
-  const orgRows = await db
+  const orgRows = await dbClient
     .select({ id: organization.id, name: organization.name, slug: organization.slug })
     .from(organization)
     .where(eq(organization.slug, slug))
@@ -36,7 +37,7 @@ export async function resolveSlugToOrg(
 
   const org = orgRows[0];
 
-  const memberRows = await db
+  const memberRows = await dbClient
     .select({ role: member.role })
     .from(member)
     .where(and(eq(member.organizationId, org.id), eq(member.userId, session.user.id)))

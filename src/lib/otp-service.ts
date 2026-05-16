@@ -31,9 +31,10 @@ export function generateOtpCode(): string {
  */
 export async function createOtp(
   email: string,
-  purpose: OtpPurpose
+  purpose: OtpPurpose,
+  dbClient: typeof db = db
 ): Promise<{ code: string } | { error: "cooldown"; cooldownRemainingSeconds: number }> {
-  const existing = await db.query.emailOtp.findFirst({
+  const existing = await dbClient.query.emailOtp.findFirst({
     where: and(eq(emailOtp.email, email), eq(emailOtp.purpose, purpose)),
   });
 
@@ -44,12 +45,12 @@ export async function createOtp(
       return { error: "cooldown", cooldownRemainingSeconds: remaining };
     }
     // Invalidate previous OTP
-    await db.delete(emailOtp).where(eq(emailOtp.id, existing.id));
+    await dbClient.delete(emailOtp).where(eq(emailOtp.id, existing.id));
   }
 
   const code = generateOtpCode();
   const now = new Date();
-  await db.insert(emailOtp).values({
+  await dbClient.insert(emailOtp).values({
     id: randomUUID(),
     email,
     code,
@@ -70,9 +71,10 @@ export async function createOtp(
 export async function validateOtp(
   email: string,
   purpose: OtpPurpose,
-  code: string
+  code: string,
+  dbClient: typeof db = db
 ): Promise<OtpResult> {
-  const otp = await db.query.emailOtp.findFirst({
+  const otp = await dbClient.query.emailOtp.findFirst({
     where: and(eq(emailOtp.email, email), eq(emailOtp.purpose, purpose)),
   });
 
@@ -81,17 +83,17 @@ export async function validateOtp(
   }
 
   if (new Date() > otp.expiresAt) {
-    await db.delete(emailOtp).where(eq(emailOtp.id, otp.id));
+    await dbClient.delete(emailOtp).where(eq(emailOtp.id, otp.id));
     return { success: false, error: "expired" };
   }
 
   if (otp.code !== code) {
     const newAttempts = otp.attempts + 1;
     if (newAttempts >= MAX_ATTEMPTS) {
-      await db.delete(emailOtp).where(eq(emailOtp.id, otp.id));
+      await dbClient.delete(emailOtp).where(eq(emailOtp.id, otp.id));
       return { success: false, error: "too_many_attempts", attemptsRemaining: 0 };
     }
-    await db
+    await dbClient
       .update(emailOtp)
       .set({ attempts: newAttempts })
       .where(eq(emailOtp.id, otp.id));
@@ -103,7 +105,7 @@ export async function validateOtp(
   }
 
   // Valid — delete the OTP
-  await db.delete(emailOtp).where(eq(emailOtp.id, otp.id));
+  await dbClient.delete(emailOtp).where(eq(emailOtp.id, otp.id));
   return { success: true };
 }
 
