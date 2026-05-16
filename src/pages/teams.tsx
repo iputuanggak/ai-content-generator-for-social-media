@@ -3,6 +3,7 @@ import type { GetServerSideProps } from "next";
 import { auth } from "@/lib/auth";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { UserGroupIcon } from "@hugeicons/core-free-icons";
+import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
 
 interface Team {
   id: string;
@@ -16,6 +17,8 @@ interface TeamsPageProps {
 }
 
 export default function TeamsPage({ teams, userName }: TeamsPageProps) {
+  const { loading } = useRequireVerifiedEmail();
+  if (loading) return null;
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 via-white to-cyan-50">
       <div className="w-full max-w-md rounded-2xl border border-teal-100 bg-white/90 p-8 shadow-lg shadow-teal-100/40 backdrop-blur-sm">

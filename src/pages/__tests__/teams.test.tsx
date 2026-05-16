@@ -39,13 +39,25 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+const mockPush = vi.fn();
+
 vi.mock("next/router", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: mockPush }),
+}));
+
+let mockHookLoading = false;
+
+vi.mock("@/lib/use-require-verified-email", () => ({
+  useRequireVerifiedEmail: () => ({ loading: mockHookLoading }),
 }));
 
 import TeamsPage, { getServerSideProps } from "../teams";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  mockPush.mockClear();
+  mockHookLoading = false;
+});
 
 describe("TeamsPage", () => {
   it("renders heading and subtitle", () => {
@@ -201,5 +213,31 @@ describe("TeamsPage getServerSideProps", () => {
         userName: "Alice",
       },
     });
+  });
+});
+
+describe("TeamsPage email verification redirect", () => {
+  it("renders nothing when useRequireVerifiedEmail returns loading", () => {
+    mockHookLoading = true;
+
+    const { container } = render(
+      <TeamsPage
+        teams={[{ id: "1", name: "Acme", slug: "acme" }]}
+        userName="Alice"
+      />
+    );
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("renders content when useRequireVerifiedEmail returns not loading", () => {
+    mockHookLoading = false;
+
+    render(
+      <TeamsPage
+        teams={[{ id: "1", name: "Acme", slug: "acme" }]}
+        userName="Alice"
+      />
+    );
+    expect(screen.getByText("Pick a team")).toBeInTheDocument();
   });
 });
