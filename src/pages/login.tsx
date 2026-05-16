@@ -41,6 +41,8 @@ export default function LoginPage() {
 
       // Check email verification status
       const emailVerified = data.session?.user?.emailVerified;
+      const { invitationId } = router.query;
+
       if (!emailVerified) {
         // Auto-send OTP and redirect to verification page
         await fetch("/api/auth/send-otp", {
@@ -48,12 +50,15 @@ export default function LoginPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, purpose: "email_verification" }),
         });
-        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        const params = new URLSearchParams({ email });
+        if (invitationId && typeof invitationId === "string") {
+          params.set("invitationId", invitationId);
+        }
+        router.push(`/verify-email?${params.toString()}`);
         return;
       }
 
       // If arriving from an invitation link, redirect back to accept it
-      const { invitationId } = router.query;
       if (invitationId && typeof invitationId === "string") {
         router.push(`/accept-invitation?invitationId=${invitationId}`);
         return;

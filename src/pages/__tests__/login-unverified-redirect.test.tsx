@@ -8,10 +8,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 const mockPush = vi.fn();
+let mockQuery: Record<string, string> = {};
 
 vi.mock("next/router", () => ({
   useRouter: () => ({
-    query: {},
+    query: mockQuery,
     push: mockPush,
   }),
 }));
@@ -46,6 +47,7 @@ async function fillAndSubmit() {
 describe("Login redirect for unverified users", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockQuery = {};
     vi.mocked(authClient.signIn.email).mockResolvedValue({ error: null } as never);
   });
 
@@ -127,6 +129,27 @@ describe("Login redirect for unverified users", () => {
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/teams");
+    });
+  });
+
+  it("preserves invitationId when redirecting unverified user to /verify-email", async () => {
+    mockQuery = { invitationId: "inv-123" };
+
+    mockFetch
+      .mockResolvedValueOnce({
+        json: async () => ({
+          session: { user: { emailVerified: false } },
+          teams: [],
+        }),
+      })
+      .mockResolvedValueOnce({ json: async () => ({ success: true }) });
+
+    await fillAndSubmit();
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith(
+        "/verify-email?email=test%40example.com&invitationId=inv-123"
+      );
     });
   });
 
