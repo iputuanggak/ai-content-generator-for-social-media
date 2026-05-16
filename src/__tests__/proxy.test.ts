@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { getSmartRedirectLogic } from "@/lib/smart-redirect";
 
 type CookieValue = { name: string; value: string };
 
@@ -57,6 +58,7 @@ async function proxyLogic({
   pathname,
   cookies,
   resolveSlug,
+  listOrganizations,
 }: {
   pathname: string;
   cookies: CookieValue[];
@@ -64,6 +66,9 @@ async function proxyLogic({
     slug: string,
     headers: Record<string, string>
   ) => Promise<ResolveResult>;
+  listOrganizations: () => Promise<
+    Array<{ id: string; slug: string | null }>
+  >;
 }): Promise<{
   action: "next" | "redirect";
   destination?: string;
@@ -72,7 +77,9 @@ async function proxyLogic({
   if (AUTH_PAGES.includes(pathname)) {
     const hasSession = cookies.some((c) => SESSION_COOKIES.includes(c.name));
     if (hasSession) {
-      return { action: "redirect", destination: "/teams" };
+      const orgs = await listOrganizations();
+      const destination = getSmartRedirectLogic(orgs);
+      return { action: "redirect", destination };
     }
     return { action: "next" };
   }
@@ -122,6 +129,11 @@ const resolvedOrg: ResolveResult = {
 
 const validCookies = [{ name: "better-auth.session_token", value: "abc" }];
 
+const defaultListOrganizations = async () => [
+  { id: "org-1", slug: "acme-marketing" },
+  { id: "org-2", slug: "beta-team" },
+];
+
 describe("proxy auth gate", () => {
   describe("excluded paths pass through", () => {
     it.each([
@@ -141,6 +153,7 @@ describe("proxy auth gate", () => {
         pathname,
         cookies: [],
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("next");
     });
@@ -152,6 +165,7 @@ describe("proxy auth gate", () => {
         pathname: "/acme-marketing",
         cookies: [],
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/login");
@@ -162,6 +176,7 @@ describe("proxy auth gate", () => {
         pathname: "/acme-marketing/history",
         cookies: [],
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/login");
@@ -172,6 +187,7 @@ describe("proxy auth gate", () => {
         pathname: "/acme-marketing",
         cookies: [{ name: "better-auth.session_token.0", value: "chunk" }],
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("next");
     });
@@ -186,6 +202,7 @@ describe("proxy auth gate", () => {
           status: 404,
           body: { error: "Team not found" },
         }),
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/teams");
@@ -199,6 +216,7 @@ describe("proxy auth gate", () => {
           status: 404,
           body: { error: "Team not found" },
         }),
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/teams");
@@ -212,6 +230,7 @@ describe("proxy auth gate", () => {
           status: 401,
           body: { error: "Unauthorized" },
         }),
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/login");
@@ -224,6 +243,7 @@ describe("proxy auth gate", () => {
         pathname: "/acme-marketing",
         cookies: validCookies,
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("next");
     });
@@ -233,6 +253,7 @@ describe("proxy auth gate", () => {
         pathname: "/acme-marketing/history",
         cookies: validCookies,
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("next");
     });
@@ -242,6 +263,7 @@ describe("proxy auth gate", () => {
         pathname: "/acme-marketing/settings/brand",
         cookies: validCookies,
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("next");
     });
@@ -254,6 +276,7 @@ describe("proxy auth gate", () => {
           status: 200,
           body: { id: "org-42", slug: "acme-marketing", role: "member" },
         }),
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("next");
       expect(result.headers).toEqual({
@@ -264,25 +287,57 @@ describe("proxy auth gate", () => {
     });
   });
 
-  describe("auth-page guard — logged-in users redirected away from /login and /register", () => {
-    it("redirects /login to /teams when session cookie is present", async () => {
+  describe("auth-page guard — logged-in users redirected using smart redirect", () => {
+    it("redirects /login to /teams when user has multiple teams", async () => {
       const result = await proxyLogic({
         pathname: "/login",
         cookies: validCookies,
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: async () => [
+          { id: "org-1", slug: "acme" },
+          { id: "org-2", slug: "beta" },
+        ],
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/teams");
     });
 
-    it("redirects /register to /teams when session cookie is present", async () => {
+    it("redirects /register to /teams when user has multiple teams", async () => {
       const result = await proxyLogic({
         pathname: "/register",
         cookies: validCookies,
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: async () => [
+          { id: "org-1", slug: "acme" },
+          { id: "org-2", slug: "beta" },
+        ],
       });
       expect(result.action).toBe("redirect");
       expect(result.destination).toBe("/teams");
+    });
+
+    it("redirects /login to /:slug when user has exactly 1 team", async () => {
+      const result = await proxyLogic({
+        pathname: "/login",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: async () => [
+          { id: "org-1", slug: "acme-marketing" },
+        ],
+      });
+      expect(result.action).toBe("redirect");
+      expect(result.destination).toBe("/acme-marketing");
+    });
+
+    it("redirects /register to /onboarding when user has 0 teams", async () => {
+      const result = await proxyLogic({
+        pathname: "/register",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: async () => [],
+      });
+      expect(result.action).toBe("redirect");
+      expect(result.destination).toBe("/onboarding");
     });
 
     it("passes through /login without session cookie", async () => {
@@ -290,6 +345,7 @@ describe("proxy auth gate", () => {
         pathname: "/login",
         cookies: [],
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("next");
     });
@@ -299,6 +355,7 @@ describe("proxy auth gate", () => {
         pathname: "/register",
         cookies: [],
         resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
       });
       expect(result.action).toBe("next");
     });
@@ -310,6 +367,7 @@ describe("proxy auth gate", () => {
           pathname,
           cookies: validCookies,
           resolveSlug: async () => resolvedOrg,
+          listOrganizations: defaultListOrganizations,
         });
         expect(result.action).toBe("next");
       }

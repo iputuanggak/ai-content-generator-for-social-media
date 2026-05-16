@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveSlugToOrg } from "@/lib/resolve-slug";
 import { SLUG_DENYLIST } from "@/lib/slug";
+import { getSmartRedirect } from "@/lib/smart-redirect";
 
 const SESSION_COOKIES = [
   "better-auth.session_token",
@@ -45,7 +46,8 @@ export async function proxy(request: NextRequest) {
 
   if (AUTH_PAGES.includes(pathname)) {
     if (hasSessionCookie(request)) {
-      return NextResponse.redirect(new URL("/teams", request.url));
+      const destination = await getSmartRedirect(request.headers);
+      return NextResponse.redirect(new URL(destination, request.url));
     }
     return NextResponse.next();
   }

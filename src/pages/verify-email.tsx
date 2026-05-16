@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
+import { getSmartRedirectLogic } from "@/lib/smart-redirect";
+import { authClient } from "@/lib/auth-client";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
-  const { email, invitationId } = router.query;
+  const { email: queryEmail, invitationId } = router.query;
+  const { data: sessionData } = authClient.useSession();
+
+  const email =
+    queryEmail && typeof queryEmail === "string"
+      ? queryEmail
+      : sessionData?.user?.email ?? "";
 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -52,11 +60,20 @@ export default function VerifyEmailPage() {
 
     if (res.ok) {
       setSuccess(true);
-      const destination =
-        invitationId && typeof invitationId === "string"
-          ? `/accept-invitation?invitationId=${invitationId}`
-          : "/onboarding";
-      router.push(destination);
+      if (invitationId && typeof invitationId === "string") {
+        router.push(`/accept-invitation?invitationId=${invitationId}`);
+        return;
+      }
+      try {
+        const sessionRes = await fetch("/api/session");
+        const sessionData = await sessionRes.json();
+        const teams: Array<{ id: string; slug: string | null }> =
+          sessionData.teams ?? [];
+        const destination = getSmartRedirectLogic(teams);
+        router.push(destination);
+      } catch {
+        router.push("/onboarding");
+      }
       return;
     }
 
