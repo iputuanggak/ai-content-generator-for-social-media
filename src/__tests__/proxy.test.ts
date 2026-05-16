@@ -51,6 +51,8 @@ function extractSlug(pathname: string): string | null {
   return candidate;
 }
 
+const AUTH_PAGES = ["/login", "/register"];
+
 async function proxyLogic({
   pathname,
   cookies,
@@ -67,6 +69,14 @@ async function proxyLogic({
   destination?: string;
   headers?: Record<string, string>;
 }> {
+  if (AUTH_PAGES.includes(pathname)) {
+    const hasSession = cookies.some((c) => SESSION_COOKIES.includes(c.name));
+    if (hasSession) {
+      return { action: "redirect", destination: "/teams" };
+    }
+    return { action: "next" };
+  }
+
   if (isExcludedPath(pathname)) {
     return { action: "next" };
   }
@@ -251,6 +261,58 @@ describe("proxy auth gate", () => {
         "x-org-slug": "acme-marketing",
         "x-org-role": "member",
       });
+    });
+  });
+
+  describe("auth-page guard — logged-in users redirected away from /login and /register", () => {
+    it("redirects /login to /teams when session cookie is present", async () => {
+      const result = await proxyLogic({
+        pathname: "/login",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+      });
+      expect(result.action).toBe("redirect");
+      expect(result.destination).toBe("/teams");
+    });
+
+    it("redirects /register to /teams when session cookie is present", async () => {
+      const result = await proxyLogic({
+        pathname: "/register",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+      });
+      expect(result.action).toBe("redirect");
+      expect(result.destination).toBe("/teams");
+    });
+
+    it("passes through /login without session cookie", async () => {
+      const result = await proxyLogic({
+        pathname: "/login",
+        cookies: [],
+        resolveSlug: async () => resolvedOrg,
+      });
+      expect(result.action).toBe("next");
+    });
+
+    it("passes through /register without session cookie", async () => {
+      const result = await proxyLogic({
+        pathname: "/register",
+        cookies: [],
+        resolveSlug: async () => resolvedOrg,
+      });
+      expect(result.action).toBe("next");
+    });
+
+    it("does not redirect other excluded paths with session cookie", async () => {
+      const otherPaths = ["/api", "/_next/static/chunk.js", "/verify-email", "/onboarding", "/favicon.ico"];
+      for (const pathname of otherPaths) {
+        const result = await proxyLogic({
+          pathname,
+          cookies: validCookies,
+          resolveSlug: async () => resolvedOrg,
+        });
+        expect(result.action).toBe("next");
+      }
     });
   });
 

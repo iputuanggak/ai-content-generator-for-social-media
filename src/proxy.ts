@@ -38,8 +38,17 @@ function extractSlug(pathname: string): string | null {
   return candidate;
 }
 
+const AUTH_PAGES = ["/login", "/register"];
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (AUTH_PAGES.includes(pathname)) {
+    if (hasSessionCookie(request)) {
+      return NextResponse.redirect(new URL("/teams", request.url));
+    }
+    return NextResponse.next();
+  }
 
   if (isExcludedPath(pathname)) {
     return NextResponse.next();
