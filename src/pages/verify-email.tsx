@@ -196,6 +196,20 @@ export default function VerifyEmailPage() {
             </button>
           )}
         </div>
+
+        <div className="mt-6 border-t border-border pt-4 text-center">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              await authClient.signOut();
+              router.push("/login");
+            }}
+          >
+            Log out
+          </Button>
+        </div>
       </div>
     </div>
   );

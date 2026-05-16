@@ -106,7 +106,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: "/((?!api/|_next/|login|register|onboarding|accept-invitation|teams|favicon\\.ico).*)",
+      source: "/((?!api/|_next/|onboarding|accept-invitation|teams|favicon\\.ico).*)",
     },
   ],
 };
