@@ -113,14 +113,17 @@ describe("SettingsPage CSR", () => {
     });
   });
 
-  it("uses shadcn Input for model id", async () => {
+  it("uses shadcn Select for AI model", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(brandSettingsResponse),
     });
-    render(<SettingsPage />);
-    const input = await screen.findByPlaceholderText(/google\/gemini/i);
-    expect(input).toHaveAttribute("data-slot", "input");
+    const { container } = render(<SettingsPage />);
+    const triggers = await screen.findAllByRole("group");
+    const modelSection = container.querySelectorAll('[data-slot="select-trigger"]');
+    await waitFor(() => {
+      expect(modelSection.length).toBeGreaterThanOrEqual(2);
+    });
   });
 
   it("uses shadcn Button for save settings", async () => {

@@ -8,7 +8,6 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ContentSkeleton } from "@/components/content-skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
@@ -19,6 +18,33 @@ const TONE_OPTIONS: { value: Tone; label: string }[] = [
   { value: "humorous", label: "Humorous" },
   { value: "inspirational", label: "Inspirational" },
 ];
+
+const MODEL_OPTIONS: { group: string; models: { value: string; label: string }[] }[] = [
+  {
+    group: "Google",
+    models: [
+      { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+      { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash" },
+    ],
+  },
+  {
+    group: "OpenAI",
+    models: [
+      { value: "openai/gpt-4.1-mini", label: "GPT-4.1 Mini" },
+      { value: "openai/gpt-4.1-nano", label: "GPT-4.1 Nano" },
+    ],
+  },
+  {
+    group: "Anthropic",
+    models: [
+      { value: "anthropic/claude-3.5-haiku", label: "Claude 3.5 Haiku" },
+      { value: "anthropic/claude-3-haiku", label: "Claude 3 Haiku" },
+    ],
+  },
+];
+
+const ALL_MODEL_IDS = new Set(MODEL_OPTIONS.flatMap((g) => g.models.map((m) => m.value)));
+const DEFAULT_MODEL_ID = "google/gemini-2.5-flash";
 
 export default function SettingsPage() {
   const { loading: verifyLoading } = useRequireVerifiedEmail();
@@ -56,7 +82,8 @@ function SettingsContent() {
         setBrandVoice((data.brandVoice as string) ?? "");
         setDefaultTone((data.defaultTone as Tone) ?? "professional");
         setActivePlatforms((data.activePlatforms as Platform[]) ?? []);
-        setModelId((data.modelId as string) ?? "");
+        const savedModelId = (data.modelId as string) ?? "";
+        setModelId(ALL_MODEL_IDS.has(savedModelId) ? savedModelId : DEFAULT_MODEL_ID);
         setIsAdmin((data.isAdmin as boolean) ?? false);
       })
       .catch(() => {
@@ -207,17 +234,29 @@ function SettingsContent() {
                   htmlFor="model-id"
                   className={["mb-1.5 block text-sm font-medium", isAdmin ? "text-stone-700" : "text-stone-500"].join(" ")}
                 >
-                  OpenRouter Model
+                  AI Model
                 </label>
-                <Input
-                  id="model-id"
-                  type="text"
+                <Select
                   value={modelId}
-                  onChange={(e) => setModelId(e.target.value)}
-                  readOnly={!isAdmin}
+                  onValueChange={(val) => setModelId(val)}
                   disabled={!isAdmin}
-                  placeholder="e.g. google/gemini-2.5-flash"
-                />
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODEL_OPTIONS.map((group) => [
+                      <SelectItem key={group.group} value={group.group} disabled>
+                        <span className="font-semibold">{group.group}</span>
+                      </SelectItem>,
+                      ...group.models.map((model) => (
+                        <SelectItem key={model.value} value={model.value}>
+                          <span className="pl-4">{model.label}</span>
+                        </SelectItem>
+                      )),
+                    ])}
+                  </SelectContent>
+                </Select>
               </div>
 
               {isAdmin && (
