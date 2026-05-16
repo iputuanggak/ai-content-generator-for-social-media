@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { getSmartRedirectLogic } from "@/lib/smart-redirect";
 import { authClient } from "@/lib/auth-client";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { email: queryEmail, invitationId } = router.query;
   const { data: sessionData } = authClient.useSession();
 
@@ -60,6 +62,7 @@ export default function VerifyEmailPage() {
 
     if (res.ok) {
       setSuccess(true);
+      queryClient.removeQueries({ queryKey: ["session"] });
       if (invitationId && typeof invitationId === "string") {
         router.push(`/accept-invitation?invitationId=${invitationId}`);
         return;

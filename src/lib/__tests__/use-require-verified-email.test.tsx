@@ -5,10 +5,12 @@ import { render, screen, cleanup, waitFor, renderHook } from "@testing-library/r
 import "@testing-library/jest-dom/vitest";
 
 const mockPush = vi.fn();
+let mockRouterQuery: Record<string, string | string[]> = {};
 
 vi.mock("next/router", () => ({
   useRouter: () => ({
     push: mockPush,
+    query: mockRouterQuery,
   }),
 }));
 
@@ -36,6 +38,7 @@ function TestComponent() {
 afterEach(() => {
   cleanup();
   mockPush.mockClear();
+  mockRouterQuery = {};
   mockUseSessionReturn = { data: null, isPending: true };
 });
 
@@ -59,6 +62,7 @@ describe("useRequireVerifiedEmail", () => {
   });
 
   it("redirects to /verify-email when email is not verified", async () => {
+    mockRouterQuery = {};
     mockUseSessionReturn = {
       data: { user: { emailVerified: false } },
       isPending: false,
@@ -67,9 +71,29 @@ describe("useRequireVerifiedEmail", () => {
     render(<TestComponent />);
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/verify-email");
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: "/verify-email",
+        query: {},
+      });
     });
     expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+  });
+
+  it("preserves query params when redirecting to /verify-email", async () => {
+    mockRouterQuery = { invitationId: "abc-123" };
+    mockUseSessionReturn = {
+      data: { user: { emailVerified: false } },
+      isPending: false,
+    };
+
+    render(<TestComponent />);
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: "/verify-email",
+        query: { invitationId: "abc-123" },
+      });
+    });
   });
 
   it("does not redirect when email is verified", async () => {

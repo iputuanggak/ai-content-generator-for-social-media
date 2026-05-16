@@ -10,7 +10,7 @@ export function useRequireVerifiedEmail(): { loading: boolean } {
   }
 
   if (data?.user?.emailVerified === false) {
-    router.push("/verify-email");
+    router.push({ pathname: "/verify-email", query: router.query });
     return { loading: true };
   }
 
