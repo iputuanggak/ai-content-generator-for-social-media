@@ -3,8 +3,20 @@ import { db } from "@/lib/db";
 import { eq, and, ilike, gte, lte, desc } from "drizzle-orm";
 import { generation } from "@/lib/db/schema";
 import { withSlugSession } from "@/lib/with-session";
+import type { Tone } from "@/lib/content-adapter";
+import { generateContent } from "@/lib/generation-service";
+import { initSSE, sendSSEEvent, closeSSE } from "@/lib/sse";
+
+export const config = {
+  api: {
+    responseLimit: false,
+  },
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === "POST") {
+    return handlePost(req, res);
+  }
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -52,4 +64,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const items = allRows.slice(offset, offset + pageSize);
 
   return res.status(200).json({ items, total, page, pageSize });
+}
+
+async function handlePost(req: NextApiRequest, res: NextApiResponse) {
+  const ctx = await withSlugSession(req, res);
+  if (!ctx) return;
+
+  const { topic, tone } = req.body as { topic?: string; tone?: Tone };
+
+  if (!topic || typeof topic !== "string" || topic.trim() === "") {
+    return res.status(400).json({ error: "topic is required" });
+  }
+  if (!tone) {
+    return res.status(400).json({ error: "tone is required" });
+  }
+
+  initSSE(res);
+
+  try {
+    await generateContent({
+      organizationId: ctx.orgId,
+      memberId: ctx.memberId,
+      topic: topic.trim(),
+      tone,
+      onPlatformOutput: ({ platform, content, platformOutputId, generationId }) => {
+        sendSSEEvent(res, { platform, content, generationId, platformOutputId });
+      },
+    });
+  } catch (err) {
+    console.error("Generation error:", err);
+    sendSSEEvent(res, { error: "Generation failed for one or more platforms" });
+  }
+
+  closeSSE(res);
 }

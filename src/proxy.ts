@@ -46,8 +46,16 @@ export async function proxy(request: NextRequest) {
 
   if (AUTH_PAGES.includes(pathname)) {
     if (hasSessionCookie(request)) {
-      const destination = await getSmartRedirect(request.headers);
-      return NextResponse.redirect(new URL(destination, request.url));
+      try {
+        const destination = await getSmartRedirect(request.headers);
+        return NextResponse.redirect(new URL(destination, request.url));
+      } catch {
+        const response = NextResponse.next();
+        for (const name of SESSION_COOKIES) {
+          response.cookies.delete(name);
+        }
+        return response;
+      }
     }
     return NextResponse.next();
   }

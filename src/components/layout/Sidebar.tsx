@@ -30,7 +30,9 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const navLinks = buildNavLinks(slug);
 
   async function handleLogout() {
-    await authClient.signOut();
+    try {
+      await authClient.signOut();
+    } catch {}
     router.push("/login");
   }
 
