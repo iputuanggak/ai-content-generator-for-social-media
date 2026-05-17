@@ -9,7 +9,7 @@ import { ContentSkeleton } from "@/components/content-skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Toggle } from "@/components/ui/toggle";
 import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
 
 const ALL_MODEL_IDS = new Set(MODEL_OPTIONS.flatMap((g) => g.models.map((m) => m.value)));
@@ -176,26 +176,30 @@ function SettingsContent() {
                 <p className={["mb-2 block text-sm font-medium", isAdmin ? "text-stone-700" : "text-stone-500"].join(" ")}>
                   Active Platforms
                 </p>
-                <ToggleGroup
-                  type="multiple"
-                  value={activePlatforms}
-                  onValueChange={(vals) => {
-                    if (!isAdmin) return;
-                    setActivePlatforms(vals as Platform[]);
-                  }}
-                  className="flex flex-wrap gap-2"
-                >
-                  {PLATFORM_OPTIONS.map(({ value, label }) => (
-                    <ToggleGroupItem
-                      key={value}
-                      value={value}
-                      disabled={!isAdmin}
-                      variant="outline"
-                    >
-                      {label}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                <div className="flex flex-wrap gap-2">
+                  {PLATFORM_OPTIONS.map(({ value, label }) => {
+                    const isActive = activePlatforms.includes(value);
+                    return (
+                      <Toggle
+                        key={value}
+                        pressed={isActive}
+                        onPressedChange={() => {
+                          if (!isAdmin) return;
+                          setActivePlatforms((prev) =>
+                            prev.includes(value)
+                              ? prev.filter((p) => p !== value)
+                              : [...prev, value]
+                          );
+                        }}
+                        disabled={!isAdmin}
+                        variant="outline"
+                        className="hover:bg-transparent hover:text-inherit"
+                      >
+                        {label}
+                      </Toggle>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>

@@ -23,7 +23,7 @@ export function OtpEmail({ code, purpose = "verify your email address" }: OtpEma
       <Body style={main}>
         <Container style={container}>
           <Section style={logoSection}>
-            <div style={logoBadge}>C</div>
+            <div style={logoBadge}>Lo</div>
             <span style={logoText}>Lotus</span>
           </Section>
 

@@ -41,7 +41,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
     if (href === base) {
       return router.pathname === "/[slug]" || router.pathname === "/dashboard";
     }
-    return router.pathname.startsWith(href);
+    return router.asPath.startsWith(href);
   }
 
   return (

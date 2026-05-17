@@ -24,7 +24,7 @@ export default function TeamsPage({ teams, userName }: TeamsPageProps) {
       <div className="w-full max-w-md rounded-2xl border border-teal-100 bg-white/90 p-8 shadow-lg shadow-teal-100/40 backdrop-blur-sm">
         <div className="mb-6 flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">C</span>
+            <span className="text-sm font-bold text-primary-foreground">Lo</span>
           </div>
           <span className="text-lg font-semibold text-foreground">Lotus</span>
         </div>

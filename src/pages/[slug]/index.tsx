@@ -219,7 +219,7 @@ function DashboardContent() {
       {teamLoading || brandSettingsLoading ? (
           <div className="space-y-6">
             <ContentSkeleton lines={2} />
-            <div className="rounded-2xl border border-amber-100 bg-amber-50/40 p-6">
+            <div className="rounded-2xl border  p-6">
               <ContentSkeleton lines={4} />
             </div>
           </div>
@@ -245,7 +245,7 @@ function DashboardContent() {
               <p className="mb-6 text-sm text-zinc-500">
                 Describe your topic and choose a tone — we&apos;ll adapt it for each platform.
               </p>
-              <div className="rounded-2xl border border-amber-100 bg-amber-50/40 p-6 shadow-sm">
+              <div className="rounded-2xl border   p-6 shadow-sm">
                 <form onSubmit={handleGenerate} className="space-y-5">
                   <div>
                     <label
@@ -272,7 +272,7 @@ function DashboardContent() {
                       Tone
                     </label>
                     <Select value={tone} onValueChange={(v) => setTone(v as Tone)}>
-                      <SelectTrigger className="w-full rounded-xl border border-amber-200 bg-white px-4 py-2.5 text-sm text-zinc-900">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select tone" />
                       </SelectTrigger>
                       <SelectContent>

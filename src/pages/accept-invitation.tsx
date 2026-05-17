@@ -52,7 +52,7 @@ export default function AcceptInvitationPage() {
         <div className="flex flex-col items-center gap-4">
           {/* Pulsing Lotus logo */}
           <div className="flex h-12 w-12 animate-pulse items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/30">
-            <span className="text-xl font-bold text-primary-foreground">C</span>
+            <span className="text-xl font-bold text-primary-foreground">Lo</span>
           </div>
           <p className="text-sm text-muted-foreground">Loading…</p>
         </div>
@@ -67,7 +67,7 @@ export default function AcceptInvitationPage() {
           {/* Lotus wordmark */}
           <div className="mb-6 flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-primary-foreground">C</span>
+              <span className="text-sm font-bold text-primary-foreground">Lo</span>
             </div>
             <span className="text-lg font-semibold text-foreground">Lotus</span>
           </div>
@@ -101,7 +101,7 @@ export default function AcceptInvitationPage() {
         {/* Lotus wordmark */}
         <div className="mb-6 flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">C</span>
+            <span className="text-sm font-bold text-primary-foreground">Lo</span>
           </div>
           <span className="text-lg font-semibold text-foreground">Lotus</span>
         </div>
