@@ -108,3 +108,31 @@ describe("Landing Page - Hero Section", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("Landing Page - Testimonial Section", () => {
+  it("renders testimonial section with heading", () => {
+    render(<LandingPage />);
+    expect(
+      screen.getByRole("heading", { level: 2, name: /what marketers are saying/i })
+    ).toBeInTheDocument();
+  });
+
+  it("renders 3 testimonial cards", () => {
+    const { container } = render(<LandingPage />);
+    expect(
+      container.querySelectorAll("[data-testid='testimonial-card']")
+    ).toHaveLength(3);
+  });
+
+  it("testimonials appear between How It Works and CTA", () => {
+    const { container } = render(<LandingPage />);
+    const sections = Array.from(container.querySelectorAll("section"));
+    const howItWorksIdx = sections.findIndex((s) => s.dataset.testid === "how-it-works");
+    const testimonialIdx = sections.findIndex((s) => s.dataset.testid === "testimonial-section");
+    const ctaIdx = sections.findIndex(
+      (s) => s.textContent?.includes("Ready to save hours") && !s.dataset.testid
+    );
+    expect(howItWorksIdx).toBeLessThan(testimonialIdx);
+    expect(testimonialIdx).toBeLessThan(ctaIdx);
+  });
+});

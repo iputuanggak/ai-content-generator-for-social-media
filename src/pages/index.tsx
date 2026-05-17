@@ -4,6 +4,7 @@ import { HeroSection } from "@/components/hero-section";
 import { PlatformBadges } from "@/components/platform-badges";
 import { BentoFeatureGrid } from "@/components/bento-feature-grid";
 import { HowItWorksStepper } from "@/components/how-it-works-stepper";
+import { TestimonialCards } from "@/components/testimonial-cards";
 
 export default function LandingPage() {
   return (
@@ -16,6 +17,8 @@ export default function LandingPage() {
       <BentoFeatureGrid />
 
       <HowItWorksStepper />
+
+      <TestimonialCards />
 
       {/* CTA */}
       <section className="bg-secondary py-20 px-6 text-center">
