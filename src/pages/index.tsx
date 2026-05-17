@@ -1,40 +1,8 @@
 import Link from "next/link";
 import { LandingNav } from "@/components/landing-nav";
 import { HeroSection } from "@/components/hero-section";
-
-const features = [
-  {
-    title: "Multi-Platform Generation",
-    description:
-      "Generate adapted content for all 8 social media platforms simultaneously from a single prompt. Each output is tailored to that platform's tone, format, and character limits.",
-  },
-  {
-    title: "Brand Settings",
-    description:
-      "Configure your team's brand voice, default tone, and active platforms. Every generation is automatically influenced by your brand settings for consistent output.",
-  },
-  {
-    title: "Team Collaboration",
-    description:
-      "Invite team members to a shared workspace. Your whole team shares the same generation history, brand settings, and platform configurations.",
-  },
-  {
-    title: "Generation History",
-    description:
-      "Every generation is saved with its inputs, intended publish date, and all platform outputs — including any edits made after generation.",
-  },
-];
-
-const platforms = [
-  "Twitter / X",
-  "LinkedIn",
-  "Instagram",
-  "Facebook",
-  "TikTok",
-  "YouTube",
-  "Threads",
-  "Pinterest",
-];
+import { PlatformBadges } from "@/components/platform-badges";
+import { BentoFeatureGrid } from "@/components/bento-feature-grid";
 
 export default function LandingPage() {
   return (
@@ -42,44 +10,9 @@ export default function LandingPage() {
       <LandingNav />
       <HeroSection />
 
-      {/* Platforms */}
-      <section className="bg-muted py-16 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-8">
-            8 platforms supported
-          </h2>
-          <div className="flex flex-wrap justify-center gap-3">
-            {platforms.map((platform) => (
-              <span
-                key={platform}
-                className="rounded-full border border-border bg-accent px-5 py-2 text-sm font-medium text-accent-foreground shadow-sm"
-              >
-                {platform}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PlatformBadges />
 
-      {/* Features */}
-      <section className="py-20 px-6 max-w-5xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-14 tracking-tight text-foreground">
-          Everything your marketing team needs
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="rounded-xl border border-border bg-card p-7"
-            >
-              <h3 className="text-lg font-semibold mb-2 text-card-foreground">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <BentoFeatureGrid />
 
       {/* CTA */}
       <section className="bg-secondary py-20 px-6 text-center">

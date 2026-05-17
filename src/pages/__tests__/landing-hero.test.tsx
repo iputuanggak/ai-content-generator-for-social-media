@@ -1,24 +1,33 @@
 // @vitest-environment jsdom
 
+import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
 vi.mock("framer-motion", () => ({
-  motion: {
-    div: (props: Record<string, unknown>) => {
-      const { initial: _i, animate: _a, exit: _e, transition: _t, variants: _v, whileHover: _wh, whileTap: _wt, whileInView: _wiv, ...rest } = props;
-      return <div {...rest as Record<string, unknown>} />;
-    },
-    svg: (props: Record<string, unknown>) => {
-      const { initial: _i, animate: _a, exit: _e, transition: _t, variants: _v, ...rest } = props;
-      return <svg {...rest as Record<string, unknown>} />;
-    },
-    path: (props: Record<string, unknown>) => {
-      const { initial: _i, animate: _a, exit: _e, transition: _t, ...rest } = props;
-      return <path {...rest as Record<string, unknown>} />;
-    },
-  },
+  motion: new Proxy(
+    {},
+    {
+      get(_target, prop: string) {
+        return (props: Record<string, unknown>) => {
+          const {
+            initial: _i,
+            animate: _a,
+            exit: _e,
+            transition: _t,
+            variants: _v,
+            whileHover: _wh,
+            whileTap: _wt,
+            whileInView: _wiv,
+            ...rest
+          } = props;
+          const El = prop as keyof JSX.IntrinsicElements;
+          return React.createElement(El, rest);
+        };
+      },
+    }
+  ),
   AnimatePresence: ({ children }: { children: React.ReactNode }) =>
     children,
 }));
