@@ -3,6 +3,7 @@ import { LandingNav } from "@/components/landing-nav";
 import { HeroSection } from "@/components/hero-section";
 import { PlatformBadges } from "@/components/platform-badges";
 import { BentoFeatureGrid } from "@/components/bento-feature-grid";
+import { HowItWorksStepper } from "@/components/how-it-works-stepper";
 
 export default function LandingPage() {
   return (
@@ -13,6 +14,8 @@ export default function LandingPage() {
       <PlatformBadges />
 
       <BentoFeatureGrid />
+
+      <HowItWorksStepper />
 
       {/* CTA */}
       <section className="bg-secondary py-20 px-6 text-center">
