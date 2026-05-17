@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { LandingNav } from "@/components/landing-nav";
+import { HeroSection } from "@/components/hero-section";
 
 const features = [
   {
@@ -37,40 +39,8 @@ const platforms = [
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Navigation */}
-      <nav className="flex items-center justify-between px-6 py-4 border-b border-border max-w-6xl mx-auto">
-        <span className="text-lg font-semibold tracking-tight text-foreground">Lotus</span>
-        <div className="flex items-center gap-4 text-sm font-medium">
-          <Link
-            href="/login"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/register"
-            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:opacity-90 transition-opacity"
-          >
-            Get started
-          </Link>
-        </div>
-      </nav>
-
-      {/* Hero */}
-      <section className="px-6 py-24 text-center max-w-4xl mx-auto">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-tight mb-6 text-foreground">
-          Generate social media content for every platform — at once
-        </h1>
-        <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-          Write one prompt. Get platform-adapted posts for Twitter, LinkedIn, Instagram, and 5 more — each tuned to the right tone, length, and format.
-        </p>
-        <Link
-          href="/register"
-          className="inline-block rounded-lg bg-primary px-8 py-3 text-base font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          Start for free
-        </Link>
-      </section>
+      <LandingNav />
+      <HeroSection />
 
       {/* Platforms */}
       <section className="bg-muted py-16 px-6">
