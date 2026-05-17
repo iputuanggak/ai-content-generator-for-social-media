@@ -4,6 +4,20 @@ import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
+import { DM_Serif_Display, Plus_Jakarta_Sans } from "next/font/google";
+
+const dmSerifDisplay = DM_Serif_Display({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-heading",
+  display: "swap",
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,8 +59,10 @@ export default function App({ Component, pageProps }: AppProps) {
   usePersistQueryClient();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Component {...pageProps} />
-    </QueryClientProvider>
+    <div className={`${dmSerifDisplay.variable} ${plusJakartaSans.variable}`}>
+      <QueryClientProvider client={queryClient}>
+        <Component {...pageProps} />
+      </QueryClientProvider>
+    </div>
   );
 }
