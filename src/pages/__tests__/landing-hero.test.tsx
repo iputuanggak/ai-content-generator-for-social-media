@@ -129,9 +129,7 @@ describe("Landing Page - Testimonial Section", () => {
     const sections = Array.from(container.querySelectorAll("section"));
     const howItWorksIdx = sections.findIndex((s) => s.dataset.testid === "how-it-works");
     const testimonialIdx = sections.findIndex((s) => s.dataset.testid === "testimonial-section");
-    const ctaIdx = sections.findIndex(
-      (s) => s.textContent?.includes("Ready to save hours") && !s.dataset.testid
-    );
+    const ctaIdx = sections.findIndex((s) => s.dataset.testid === "cta-section");
     expect(howItWorksIdx).toBeLessThan(testimonialIdx);
     expect(testimonialIdx).toBeLessThan(ctaIdx);
   });
