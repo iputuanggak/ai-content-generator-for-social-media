@@ -19,12 +19,12 @@ export function OtpEmail({ code, purpose = "verify your email address" }: OtpEma
   return (
     <Html>
       <Head />
-      <Preview>Your ContentGen verification code: {code}</Preview>
+      <Preview>Your Lotus verification code: {code}</Preview>
       <Body style={main}>
         <Container style={container}>
           <Section style={logoSection}>
             <div style={logoBadge}>C</div>
-            <span style={logoText}>ContentGen</span>
+            <span style={logoText}>Lotus</span>
           </Section>
 
           <Heading style={heading}>Your verification code</Heading>
@@ -42,7 +42,7 @@ export function OtpEmail({ code, purpose = "verify your email address" }: OtpEma
           </Text>
 
           <Text style={footer}>
-            &copy; {new Date().getFullYear()} ContentGen. All rights reserved.
+            &copy; {new Date().getFullYear()} Lotus. All rights reserved.
           </Text>
         </Container>
       </Body>

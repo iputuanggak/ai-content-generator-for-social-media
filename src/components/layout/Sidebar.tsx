@@ -47,7 +47,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   return (
     <div className="flex h-full flex-col bg-white border-r border-zinc-200">
       <div className="px-5 py-5 border-b border-zinc-100">
-        <span className="text-lg font-semibold text-zinc-900">ContentGen</span>
+        <span className="text-lg font-semibold text-zinc-900">Lotus</span>
       </div>
 
       <div className="px-5 py-4 border-b border-zinc-100">

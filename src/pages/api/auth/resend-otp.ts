@@ -34,9 +34,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     purpose === "email_verification" ? "verify your email address" : "reset your password";
 
   const { error: sendError } = await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? "ContentGen <noreply@contentgen.app>",
+    from: process.env.EMAIL_FROM ?? "Lotus <noreply@lotus.app>",
     to: email,
-    subject: `Your ContentGen verification code: ${result.code}`,
+    subject: `Your Lotus verification code: ${result.code}`,
     react: OtpEmail({ code: result.code, purpose: purposeLabel }),
   });
 

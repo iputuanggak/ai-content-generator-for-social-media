@@ -26,7 +26,7 @@ export default function TeamsPage({ teams, userName }: TeamsPageProps) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <span className="text-sm font-bold text-primary-foreground">C</span>
           </div>
-          <span className="text-lg font-semibold text-foreground">ContentGen</span>
+          <span className="text-lg font-semibold text-foreground">Lotus</span>
         </div>
 
         <h1 className="mb-2 text-2xl font-semibold text-foreground">

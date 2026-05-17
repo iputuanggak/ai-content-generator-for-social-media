@@ -32,13 +32,13 @@ export function InvitationEmail({
         <Container style={container}>
           <Section style={logoSection}>
             <div style={logoBadge}>C</div>
-            <span style={logoText}>ContentGen</span>
+            <span style={logoText}>Lotus</span>
           </Section>
 
           <Heading style={heading}>You&apos;re invited!</Heading>
           <Text style={subheading}>
             <strong>{invitedByUsername}</strong> has invited you to join the{" "}
-            <strong>{teamName}</strong> team on ContentGen.
+            <strong>{teamName}</strong> team on Lotus.
           </Text>
 
           <Section style={buttonSection}>
@@ -61,7 +61,7 @@ export function InvitationEmail({
           </Text>
 
           <Text style={footer}>
-            &copy; {new Date().getFullYear()} ContentGen. All rights reserved.
+            &copy; {new Date().getFullYear()} Lotus. All rights reserved.
           </Text>
         </Container>
       </Body>

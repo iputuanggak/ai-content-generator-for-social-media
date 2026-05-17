@@ -136,9 +136,9 @@ describe("TeamsPage", () => {
     expect(link.querySelector("p.text-xs")).toBeNull();
   });
 
-  it("shows ContentGen wordmark", () => {
+  it("shows Lotus wordmark", () => {
     render(<TeamsPage teams={[]} userName={null} />);
-    expect(screen.getByText("ContentGen")).toBeInTheDocument();
+    expect(screen.getByText("Lotus")).toBeInTheDocument();
   });
 });
 

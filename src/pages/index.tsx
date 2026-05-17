@@ -39,7 +39,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-border max-w-6xl mx-auto">
-        <span className="text-lg font-semibold tracking-tight text-foreground">ContentGen</span>
+        <span className="text-lg font-semibold tracking-tight text-foreground">Lotus</span>
         <div className="flex items-center gap-4 text-sm font-medium">
           <Link
             href="/login"

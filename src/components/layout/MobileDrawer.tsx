@@ -15,7 +15,7 @@ export function MobileDrawer() {
   if (loading) {
     return (
       <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 md:hidden">
-        <span className="text-base font-semibold text-zinc-900">ContentGen</span>
+        <span className="text-base font-semibold text-zinc-900">Lotus</span>
       </div>
     );
   }
@@ -45,7 +45,7 @@ export function MobileDrawer() {
             <Sidebar onNavigate={() => setOpen(false)} />
           </SheetContent>
         </Sheet>
-        <span className="text-base font-semibold text-zinc-900">ContentGen</span>
+        <span className="text-base font-semibold text-zinc-900">Lotus</span>
       </div>
     </div>
   );

@@ -91,7 +91,7 @@ describe("MobileDrawer", () => {
     );
 
     await screen.findByRole("button", { name: /open navigation/i }, { timeout: 3000 });
-    const titles = screen.getAllByText("ContentGen");
+    const titles = screen.getAllByText("Lotus");
     expect(titles.length).toBeGreaterThan(0);
   });
 });

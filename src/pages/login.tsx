@@ -83,12 +83,12 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 via-white to-cyan-50">
       <div className="w-full max-w-md rounded-2xl border border-teal-100 bg-white/90 p-8 shadow-lg shadow-teal-100/40 backdrop-blur-sm">
-        {/* ContentGen wordmark */}
+        {/* Lotus wordmark */}
         <div className="mb-6 flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <span className="text-sm font-bold text-primary-foreground">C</span>
           </div>
-          <span className="text-lg font-semibold text-foreground">ContentGen</span>
+          <span className="text-lg font-semibold text-foreground">Lotus</span>
         </div>
 
         <h1 className="mb-2 text-2xl font-semibold text-foreground">Sign in</h1>

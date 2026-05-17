@@ -30,7 +30,7 @@ export const auth = betterAuth({
         const inviteLink = `${baseUrl}/accept-invitation?invitationId=${data.id}`;
 
         const { error } = await resend.emails.send({
-          from: process.env.EMAIL_FROM ?? "ContentGen <noreply@contentgen.app>",
+          from: process.env.EMAIL_FROM ?? "Lotus <noreply@lotus.app>",
           to: data.email,
           subject: `${data.inviter.user.name} invited you to join ${data.organization.name}`,
           react: InvitationEmail({
