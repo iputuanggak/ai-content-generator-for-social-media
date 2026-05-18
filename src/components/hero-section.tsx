@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { OrganicBlobs } from "@/components/organic-blobs";
+import { HeroBeamIllustration } from "@/components/hero-beam-illustration";
 
 const containerVariants = {
   hidden: {},
@@ -47,15 +48,7 @@ export function HeroSection() {
           </Button>
         </motion.div>
         <motion.div variants={itemVariants} className="flex justify-center">
-          <div className="animate-bob">
-            <div className="w-full max-w-md aspect-[4/3] rounded-2xl bg-gradient-to-br from-primary/20 via-accent/20 to-secondary/30 border border-border/50 flex items-center justify-center p-8">
-              <p className="text-center text-sm text-muted-foreground leading-relaxed">
-                Stylized lotus flower with 8 social media platform icons
-                radiating from center in flowing curves. Soft watercolor texture.
-                Teal/warm palette. ~800x600px.
-              </p>
-            </div>
-          </div>
+          <HeroBeamIllustration />
         </motion.div>
       </motion.div>
     </section>
