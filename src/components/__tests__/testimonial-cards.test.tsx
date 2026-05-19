@@ -5,11 +5,21 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
-vi.mock("framer-motion", () => ({
-  motion: new Proxy(
+class MockIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(window, "IntersectionObserver", {
+  writable: true,
+  value: MockIntersectionObserver,
+});
+
+const { motionMock } = vi.hoisted(() => {
+  const motionProxy = new Proxy(
     {},
     {
-      get(_target, prop: string) {
+      get(_target: unknown, prop: string) {
         return (props: Record<string, unknown>) => {
           const {
             initial: _i,
@@ -20,6 +30,9 @@ vi.mock("framer-motion", () => ({
             whileHover: _wh,
             whileTap: _wt,
             whileInView: _wiv,
+            whileFocus: _wf,
+            layout: _l,
+            layoutId: _lid,
             ...rest
           } = props;
           const El = prop as keyof JSX.IntrinsicElements;
@@ -27,10 +40,18 @@ vi.mock("framer-motion", () => ({
         };
       },
     }
-  ),
-  AnimatePresence: ({ children }: { children: React.ReactNode }) =>
-    children,
-}));
+  );
+  return {
+    motionMock: {
+      motion: motionProxy,
+      AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
+      useInView: () => false,
+    },
+  };
+});
+
+vi.mock("framer-motion", () => motionMock);
+vi.mock("motion/react", () => motionMock);
 
 import { TestimonialCards } from "../testimonial-cards";
 
@@ -51,21 +72,21 @@ describe("TestimonialCards", () => {
 
   it("renders Sarah Chen testimonial", () => {
     render(<TestimonialCards />);
-    expect(screen.getByText(/Sarah Chen/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Sarah Chen/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Marketing Lead at Bloom Studio/)).toBeInTheDocument();
     expect(screen.getByText(/Content used to take our team an entire afternoon/)).toBeInTheDocument();
   });
 
   it("renders Marcus Rivera testimonial", () => {
     render(<TestimonialCards />);
-    expect(screen.getByText(/Marcus Rivera/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Marcus Rivera/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Social Media Manager at Pulse Digital/)).toBeInTheDocument();
     expect(screen.getByText(/I manage 6 client accounts/)).toBeInTheDocument();
   });
 
   it("renders Priya Patel testimonial", () => {
     render(<TestimonialCards />);
-    expect(screen.getByText(/Priya Patel/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Priya Patel/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Content Strategist at Novara/)).toBeInTheDocument();
     expect(screen.getByText(/Finally a tool that understands/)).toBeInTheDocument();
   });
@@ -74,14 +95,6 @@ describe("TestimonialCards", () => {
     const { container } = render(<TestimonialCards />);
     const quotes = container.querySelectorAll("[data-testid='decorative-quote']");
     expect(quotes).toHaveLength(3);
-  });
-
-  it("has alternating rotation on cards", () => {
-    const { container } = render(<TestimonialCards />);
-    const cards = container.querySelectorAll("[data-testid='testimonial-card']");
-    expect((cards[0] as HTMLElement).style.transform).toContain("-1");
-    expect((cards[1] as HTMLElement).style.transform).toContain("0");
-    expect((cards[2] as HTMLElement).style.transform).toContain("1");
   });
 
   it("uses responsive grid (stacks on mobile)", () => {

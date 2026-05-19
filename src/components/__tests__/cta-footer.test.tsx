@@ -5,11 +5,21 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
-vi.mock("framer-motion", () => ({
-  motion: new Proxy(
+class MockIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(window, "IntersectionObserver", {
+  writable: true,
+  value: MockIntersectionObserver,
+});
+
+const { motionMock } = vi.hoisted(() => {
+  const motionProxy = new Proxy(
     {},
     {
-      get(_target, prop: string) {
+      get(_target: unknown, prop: string) {
         return (props: Record<string, unknown>) => {
           const {
             initial: _i,
@@ -20,6 +30,9 @@ vi.mock("framer-motion", () => ({
             whileHover: _wh,
             whileTap: _wt,
             whileInView: _wiv,
+            whileFocus: _wf,
+            layout: _l,
+            layoutId: _lid,
             ...rest
           } = props;
           const El = prop as keyof JSX.IntrinsicElements;
@@ -27,10 +40,18 @@ vi.mock("framer-motion", () => ({
         };
       },
     }
-  ),
-  AnimatePresence: ({ children }: { children: React.ReactNode }) =>
-    children,
-}));
+  );
+  return {
+    motionMock: {
+      motion: motionProxy,
+      AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
+      useInView: () => false,
+    },
+  };
+});
+
+vi.mock("framer-motion", () => motionMock);
+vi.mock("motion/react", () => motionMock);
 
 import { CtaSection } from "../cta-section";
 import { MinimalFooter } from "../minimal-footer";
@@ -61,16 +82,16 @@ describe("CTA Section", () => {
     expect(link).toHaveAttribute("href", "/register");
   });
 
-  it("CTA button has pulse animation class", () => {
+  it("CTA button has transition class", () => {
     render(<CtaSection />);
     const link = screen.getByRole("link", { name: /create an account/i });
-    expect(link.className).toMatch(/animate-pulse-soft/);
+    expect(link.className).toMatch(/transition-all/);
   });
 
-  it("has a gradient background class", () => {
+  it("has a gradient background style", () => {
     const { container } = render(<CtaSection />);
     const section = container.querySelector("section[data-testid='cta-section']");
-    expect(section?.className).toMatch(/bg-gradient/);
+    expect(section?.style.background).toMatch(/gradient/);
   });
 
   it("contains an organic blob SVG element", () => {

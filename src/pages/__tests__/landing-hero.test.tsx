@@ -5,11 +5,21 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
-vi.mock("framer-motion", () => ({
-  motion: new Proxy(
+class MockIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(window, "IntersectionObserver", {
+  writable: true,
+  value: MockIntersectionObserver,
+});
+
+const { motionMock } = vi.hoisted(() => {
+  const motionProxy = new Proxy(
     {},
     {
-      get(_target, prop: string) {
+      get(_target: unknown, prop: string) {
         return (props: Record<string, unknown>) => {
           const {
             initial: _i,
@@ -20,6 +30,9 @@ vi.mock("framer-motion", () => ({
             whileHover: _wh,
             whileTap: _wt,
             whileInView: _wiv,
+            whileFocus: _wf,
+            layout: _l,
+            layoutId: _lid,
             ...rest
           } = props;
           const El = prop as keyof JSX.IntrinsicElements;
@@ -27,10 +40,18 @@ vi.mock("framer-motion", () => ({
         };
       },
     }
-  ),
-  AnimatePresence: ({ children }: { children: React.ReactNode }) =>
-    children,
-}));
+  );
+  return {
+    motionMock: {
+      motion: motionProxy,
+      AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
+      useInView: () => false,
+    },
+  };
+});
+
+vi.mock("framer-motion", () => motionMock);
+vi.mock("motion/react", () => motionMock);
 
 import LandingPage from "../index";
 
@@ -85,27 +106,20 @@ describe("Landing Page - Hero Section", () => {
     expect(link).toHaveAttribute("href", "/register");
   });
 
-  it("renders illustration placeholder with designer description", () => {
+  it("renders illustration placeholder with product dashboard label", () => {
     render(<LandingPage />);
-    expect(
-      screen.getByText(
-        /Stylized lotus flower with 8 social media platform icons/
-      )
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Product Dashboard/)).toBeInTheDocument();
   });
 
-  it("has two-column grid layout for desktop", () => {
+  it("hero section has centered text layout", () => {
     const { container } = render(<LandingPage />);
-    expect(
-      container.querySelector("[class*='lg:grid-cols-2']")
-    ).toBeInTheDocument();
+    const h1 = container.querySelector("h1");
+    expect(h1?.closest("[class*='text-center']")).toBeTruthy();
   });
 
-  it("illustration placeholder has bob animation", () => {
-    const { container } = render(<LandingPage />);
-    expect(
-      container.querySelector("[class*='animate-bob']")
-    ).toBeInTheDocument();
+  it("renders an ImagePlaceholder in the hero", () => {
+    render(<LandingPage />);
+    expect(screen.getByText(/AI Content Generator/)).toBeInTheDocument();
   });
 });
 

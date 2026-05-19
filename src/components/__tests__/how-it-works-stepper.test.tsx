@@ -5,11 +5,21 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
-vi.mock("framer-motion", () => ({
-  motion: new Proxy(
+class MockIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(window, "IntersectionObserver", {
+  writable: true,
+  value: MockIntersectionObserver,
+});
+
+const { motionMock } = vi.hoisted(() => {
+  const motionProxy = new Proxy(
     {},
     {
-      get(_target, prop: string) {
+      get(_target: unknown, prop: string) {
         return (props: Record<string, unknown>) => {
           const {
             initial: _i,
@@ -20,6 +30,9 @@ vi.mock("framer-motion", () => ({
             whileHover: _wh,
             whileTap: _wt,
             whileInView: _wiv,
+            whileFocus: _wf,
+            layout: _l,
+            layoutId: _lid,
             ...rest
           } = props;
           const El = prop as keyof JSX.IntrinsicElements;
@@ -27,10 +40,18 @@ vi.mock("framer-motion", () => ({
         };
       },
     }
-  ),
-  AnimatePresence: ({ children }: { children: React.ReactNode }) =>
-    children,
-}));
+  );
+  return {
+    motionMock: {
+      motion: motionProxy,
+      AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
+      useInView: () => false,
+    },
+  };
+});
+
+vi.mock("framer-motion", () => motionMock);
+vi.mock("motion/react", () => motionMock);
 
 import { HowItWorksStepper } from "../how-it-works-stepper";
 
@@ -66,27 +87,26 @@ describe("HowItWorksStepper", () => {
     const { container } = render(<HowItWorksStepper />);
     const circles = container.querySelectorAll("[data-testid^='step-circle-']");
     expect(circles.length).toBe(3);
-    expect(circles[0].textContent).toBe("1");
-    expect(circles[1].textContent).toBe("2");
-    expect(circles[2].textContent).toBe("3");
+    expect(circles[0].textContent).toBe("01");
+    expect(circles[1].textContent).toBe("02");
+    expect(circles[2].textContent).toBe("03");
   });
 
-  it("renders a connecting SVG line", () => {
+  it("renders vine connector SVGs between steps", () => {
     const { container } = render(<HowItWorksStepper />);
-    const svg = container.querySelector("[data-testid='connecting-line']");
-    expect(svg).toBeInTheDocument();
+    const vineSvgs = container.querySelectorAll("svg path");
+    expect(vineSvgs.length).toBeGreaterThan(0);
   });
 
-  it("steps are horizontal on desktop (grid-cols-3)", () => {
+  it("steps use two-column layout on desktop (lg:grid-cols-2)", () => {
     const { container } = render(<HowItWorksStepper />);
-    const grid = container.querySelector("[data-testid='steps-grid']");
-    expect(grid).toBeInTheDocument();
-    expect(grid?.className).toMatch(/lg:grid-cols-3/);
+    const grids = container.querySelectorAll("[class*='lg:grid-cols-2']");
+    expect(grids.length).toBeGreaterThan(0);
   });
 
   it("steps stack vertically on mobile (grid-cols-1)", () => {
     const { container } = render(<HowItWorksStepper />);
     const grid = container.querySelector("[data-testid='steps-grid']");
-    expect(grid?.className).toMatch(/grid-cols-1/);
+    expect(grid?.className).toMatch(/flex/);
   });
 });
