@@ -411,12 +411,11 @@ export function HeroSection() {
                 </div>
                 <div className="w-16" />
               </div>
-              <ImagePlaceholder
+               <img
+                src={"images/ai content generator dashboard.avif"}
+                className="w-full aspect-[16/9] min-h-[300px] sm:min-h-[400px] lg:min-h-[520px]"
                 width={1100}
                 height={620}
-                label="Product Dashboard — AI Content Generator"
-                className="w-full aspect-[16/9] min-h-[300px] sm:min-h-[400px] lg:min-h-[520px]"
-                bgColor="var(--card)"
               />
             </div>
 

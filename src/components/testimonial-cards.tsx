@@ -12,6 +12,7 @@ const testimonials = [
     avatarLabel: "Photo — Sarah Chen",
     accent: "var(--primary)",
     accentSoft: "var(--secondary)",
+    image: "images/avatar 1.avif",
   },
   {
     quote:
@@ -21,6 +22,7 @@ const testimonials = [
     avatarLabel: "Photo — Marcus Rivera",
     accent: "var(--coral)",
     accentSoft: "var(--coral-soft)",
+    image: "images/avatar 2.avif",
   },
   {
     quote:
@@ -30,6 +32,7 @@ const testimonials = [
     avatarLabel: "Photo — Priya Patel",
     accent: "var(--amber)",
     accentSoft: "var(--amber-soft)",
+    image: "images/avatar 3.avif",
   },
 ];
 
@@ -120,7 +123,10 @@ export function TestimonialCards() {
               key={t.name}
               data-testid="testimonial-card"
               variants={cardVariants}
-              whileHover={{ y: -6, transition: { duration: 0.25, ease: "easeOut" } }}
+              whileHover={{
+                y: -6,
+                transition: { duration: 0.25, ease: "easeOut" },
+              }}
               className="group relative flex flex-col rounded-2xl border border-border bg-card p-7 pt-0 overflow-hidden shadow-sm transition-shadow duration-300 hover:shadow-lg"
             >
               <div
@@ -135,14 +141,14 @@ export function TestimonialCards() {
                 <div className="mb-5 flex items-center gap-4">
                   <div
                     className="h-[60px] w-[60px] shrink-0 overflow-hidden rounded-full ring-2 ring-offset-2 ring-offset-card"
-                    style={{ "--tw-ring-color": t.accent } as React.CSSProperties}
+                    style={
+                      { "--tw-ring-color": t.accent } as React.CSSProperties
+                    }
                   >
-                    <ImagePlaceholder
-                      width={60}
-                      height={60}
-                      label={t.avatarLabel}
-                      bgColor={t.accentSoft}
+                    <img
                       className="h-full w-full rounded-full"
+                      src={t.image}
+                      alt={t.avatarLabel}
                     />
                   </div>
                   <div>

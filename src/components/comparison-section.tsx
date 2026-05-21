@@ -98,7 +98,7 @@ export function ComparisonSection() {
 
         <div
           data-testid="comparison-grid"
-          className="relative grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-8 lg:gap-0 items-start"
+          className="relative grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-8 lg:gap-0 items-center"
         >
           <motion.div
             data-testid="before-panel"
@@ -141,30 +141,32 @@ export function ComparisonSection() {
                 reformatting. Miss your posting schedule.
               </p>
 
-              <ImagePlaceholder
-                width={480}
-                height={260}
-                label="Chaotic multi-tool workflow"
+              <img
+                alt="Chaotic multi-tool workflow"
                 className="rounded-xl w-full aspect-[16/9]"
-                bgColor="oklch(0.90 0.01 210)"
+                src={"/images/multitask.avif"}
               />
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {["Canva", "Notion", "Google Docs", "Hootsuite", "Excel"].map(
-                  (tool) => (
-                    <span
-                      key={tool}
-                      className="text-[10px] font-medium px-2 py-0.5 rounded"
-                      style={{
-                        backgroundColor: "oklch(0.87 0.01 210)",
-                        color: "oklch(0.50 0.02 210)",
-                        border: "1px solid oklch(0.82 0.01 210)",
-                      }}
-                    >
-                      {tool}
-                    </span>
-                  )
-                )}
+                {[
+                  "Chat GPT",
+                  "Gemini",
+                  "Google Docs",
+                  "Calendar",
+                  "Spreadsheet",
+                ].map((tool) => (
+                  <span
+                    key={tool}
+                    className="text-[10px] font-medium px-2 py-0.5 rounded"
+                    style={{
+                      backgroundColor: "oklch(0.87 0.01 210)",
+                      color: "oklch(0.50 0.02 210)",
+                      border: "1px solid oklch(0.82 0.01 210)",
+                    }}
+                  >
+                    {tool}
+                  </span>
+                ))}
                 <span
                   className="text-[10px] font-medium px-2 py-0.5 rounded"
                   style={{
@@ -173,7 +175,7 @@ export function ComparisonSection() {
                     border: "1px solid oklch(0.82 0.01 210)",
                   }}
                 >
-                  +3 more
+                  and more
                 </span>
               </div>
             </div>
@@ -186,8 +188,7 @@ export function ComparisonSection() {
               style={{
                 background:
                   "linear-gradient(135deg, var(--coral) 0%, var(--amber) 100%)",
-                boxShadow:
-                  "0 4px 20px oklch(0.65 0.14 50 / 0.35)",
+                boxShadow: "0 4px 20px oklch(0.65 0.14 50 / 0.35)",
               }}
               initial="hidden"
               whileInView="visible"
@@ -241,12 +242,10 @@ export function ComparisonSection() {
                 Edit, schedule, done.
               </p>
 
-              <ImagePlaceholder
-                width={480}
-                height={260}
-                label="Lotus dashboard — all platforms"
+              <img
+                alt="Lotus dashboard — all platforms"
                 className="rounded-xl w-full aspect-[16/9]"
-                bgColor="var(--green-soft)"
+                src={"/images/prompt and outputs.avif"}
               />
 
               <div className="mt-4 flex items-center gap-3">

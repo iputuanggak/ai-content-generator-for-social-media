@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { ImagePlaceholder } from "@/components/ui/image-placeholder";
+import { imageConfigDefault } from "next/dist/shared/lib/image-config";
 
 const cards = [
   {
@@ -11,8 +12,9 @@ const cards = [
     accent: "var(--primary)",
     accentSoft: "var(--secondary)",
     label: "Product screenshot — multi-platform dashboard",
-    span: "md:col-span-2",
+    span: "md:col-span-7",
     imageHeight: 280,
+    image: "images/Multi-Platform Generation.avif",
   },
   {
     title: "Brand Settings",
@@ -21,8 +23,9 @@ const cards = [
     accent: "var(--coral)",
     accentSoft: "var(--coral-soft)",
     label: "Product screenshot — brand settings",
-    span: "",
+    span: "md:col-span-5",
     imageHeight: 220,
+    image: "images/Brand Settings.avif",
   },
   {
     title: "Team Collaboration",
@@ -31,8 +34,9 @@ const cards = [
     accent: "var(--amber)",
     accentSoft: "var(--amber-soft)",
     label: "Product screenshot — team workspace",
-    span: "",
+    span: "md:col-span-5",
     imageHeight: 220,
+    image: "images/Team Collaboration.avif",
   },
   {
     title: "Generation History",
@@ -41,8 +45,9 @@ const cards = [
     accent: "var(--green-botanical)",
     accentSoft: "var(--green-soft)",
     label: "Product screenshot — generation history",
-    span: "",
+    span: "md:col-span-7",
     imageHeight: 220,
+    image: "images/Generation History.avif",
   },
 ];
 
@@ -89,7 +94,7 @@ export function BentoFeatureGrid() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-60px" }}
-          className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3"
+          className="grid grid-cols-1 gap-5 md:grid-cols-12"
         >
           {cards.map((card) => (
             <motion.article
@@ -113,18 +118,40 @@ export function BentoFeatureGrid() {
                 viewBox="0 0 100 100"
                 aria-hidden="true"
               >
-                <circle cx="50" cy="30" r="30" fill="currentColor" style={{ color: card.accent }} />
-                <ellipse cx="30" cy="60" rx="25" ry="15" fill="currentColor" style={{ color: card.accent }} />
+                <circle
+                  cx="50"
+                  cy="30"
+                  r="30"
+                  fill="currentColor"
+                  style={{ color: card.accent }}
+                />
+                <ellipse
+                  cx="30"
+                  cy="60"
+                  rx="25"
+                  ry="15"
+                  fill="currentColor"
+                  style={{ color: card.accent }}
+                />
               </svg>
 
               <div className="relative">
-                <ImagePlaceholder
-                  width={800}
-                  height={card.imageHeight}
-                  label={card.label}
-                  bgColor={card.accentSoft}
-                  className="w-full"
-                />
+                {card.image ? (
+                  <img
+                    src={card.image}
+                    alt={card.label}
+                    className="w-full object-cover"
+                    style={{ height: card.imageHeight }}
+                  />
+                ) : (
+                  <ImagePlaceholder
+                    width={800}
+                    height={card.imageHeight}
+                    label={card.label}
+                    bgColor={card.accentSoft}
+                    className="w-full"
+                  />
+                )}
                 <div
                   className="absolute inset-x-0 bottom-0 h-20"
                   style={{

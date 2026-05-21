@@ -2,7 +2,6 @@
 
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
-import { ImagePlaceholder } from "@/components/ui/image-placeholder";
 
 function BotanicalLeaf({
   className,
@@ -165,18 +164,10 @@ export function FeatureShowcase() {
           "linear-gradient(135deg, oklch(0.97 0.015 90) 0%, oklch(0.94 0.03 155) 50%, oklch(0.92 0.04 170) 100%)",
       }}
     >
-      <BotanicalLeaf
-        className="absolute -top-8 -left-4 w-28 lg:w-40 text-green-botanical rotate-[-20deg]"
-      />
-      <BotanicalLeaf
-        className="absolute -bottom-12 -right-6 w-32 lg:w-48 text-green-botanical rotate-[160deg] scale-x-[-1]"
-      />
-      <VineDecor
-        className="absolute top-1/4 -right-3 w-8 h-60 text-green-botanical"
-      />
-      <VineDecor
-        className="absolute bottom-1/4 -left-2 w-8 h-48 text-coral rotate-180"
-      />
+      <BotanicalLeaf className="absolute -top-8 -left-4 w-28 lg:w-40 text-green-botanical rotate-[-20deg]" />
+      <BotanicalLeaf className="absolute -bottom-12 -right-6 w-32 lg:w-48 text-green-botanical rotate-[160deg] scale-x-[-1]" />
+      <VineDecor className="absolute top-1/4 -right-3 w-8 h-60 text-green-botanical" />
+      <VineDecor className="absolute bottom-1/4 -left-2 w-8 h-48 text-coral rotate-180" />
 
       <div
         aria-hidden="true"
@@ -239,32 +230,34 @@ export function FeatureShowcase() {
             audience and format.
           </motion.p>
 
-          <motion.div
-            variants={textItemVariants}
-            className="flex gap-3 mt-8"
-          >
-            {["Twitter", "LinkedIn", "Instagram", "TikTok", "Facebook", "Threads", "Pinterest", "YouTube"].map(
-              (platform) => (
-                <span
-                  key={platform}
-                  className="text-[10px] font-medium px-2.5 py-1 rounded-full border border-border/50 text-muted-foreground/70 bg-card/60"
-                >
-                  {platform}
-                </span>
-              ),
-            )}
+          <motion.div variants={textItemVariants} className="flex gap-3 mt-8">
+            {[
+              "Twitter",
+              "LinkedIn",
+              "Instagram",
+              "TikTok",
+              "Facebook",
+              "Threads",
+              "Pinterest",
+              "YouTube",
+            ].map((platform) => (
+              <span
+                key={platform}
+                className="text-[10px] font-medium px-2.5 py-1 rounded-full border border-border/50 text-muted-foreground/70 bg-card/60"
+              >
+                {platform}
+              </span>
+            ))}
           </motion.div>
         </div>
 
         <div className="order-1 lg:order-2">
           <motion.div variants={imageItemVariants}>
             <BrowserFrame>
-              <ImagePlaceholder
-                width={800}
-                height={500}
-                label="Product screenshot — AI content generation dashboard"
-                bgColor="var(--background)"
-                className="w-full aspect-[16/10]"
+              <img
+                src={"/images/prompt and outputs.avif"}
+                alt="Product screenshot — AI content generation dashboard"
+                className="w-full aspect-16/10"
               />
             </BrowserFrame>
           </motion.div>

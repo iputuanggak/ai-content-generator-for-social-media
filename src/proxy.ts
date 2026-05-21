@@ -24,10 +24,25 @@ function hasSessionCookie(request: NextRequest): boolean {
   return SESSION_COOKIES.some((name) => request.cookies.has(name));
 }
 
+const STATIC_EXTENSIONS = new Set([
+  ".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".avif",
+  ".woff", ".woff2", ".ttf", ".eot", ".otf",
+  ".css", ".js", ".map", ".json", ".xml", ".txt", ".pdf",
+  ".mp4", ".webm", ".mp3", ".wav", ".ogg",
+  ".zip", ".tar", ".gz",
+]);
+
+function isStaticFile(pathname: string): boolean {
+  const dotIndex = pathname.lastIndexOf(".");
+  if (dotIndex === -1) return false;
+  return STATIC_EXTENSIONS.has(pathname.slice(dotIndex).toLowerCase());
+}
+
 function isExcludedPath(pathname: string): boolean {
   return (
     EXCLUDED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/")) ||
-    pathname === "/"
+    pathname === "/" ||
+    isStaticFile(pathname)
   );
 }
 

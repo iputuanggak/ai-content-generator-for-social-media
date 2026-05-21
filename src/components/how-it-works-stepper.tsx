@@ -1,7 +1,7 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "motion/react";
-import { ImagePlaceholder } from "@/components/ui/image-placeholder";
 
 const steps = [
   {
@@ -11,7 +11,8 @@ const steps = [
       "Describe your topic and choose a tone. One input is all it takes.",
     accent: "var(--primary)",
     accentSoft: "var(--secondary)",
-    label: "Product screenshot — prompt input",
+    image: "/images/Write Prompt.avif",
+    alt: "Product screenshot — prompt input",
   },
   {
     number: 2,
@@ -20,7 +21,8 @@ const steps = [
       "Your message is reshaped for every platform's tone, length, and format conventions.",
     accent: "var(--coral)",
     accentSoft: "var(--coral-soft)",
-    label: "Product screenshot — AI generation",
+    image: "/images/platforms output.avif",
+    alt: "Product screenshot — AI generation",
   },
   {
     number: 3,
@@ -29,7 +31,8 @@ const steps = [
       "Review each output, make edits, and record your intended publish date.",
     accent: "var(--amber)",
     accentSoft: "var(--amber-soft)",
-    label: "Product screenshot — output review",
+    image: "/images/Set Calendar.avif",
+    alt: "Product screenshot — output review",
   },
 ];
 
@@ -242,12 +245,12 @@ export function HowItWorksStepper() {
                     viewport={{ once: true, margin: "-40px" }}
                     transition={{ duration: 0.5, delay: 0.15 }}
                   >
-                    <ImagePlaceholder
+                    <img
+                      src={step.image}
+                      alt={step.alt}
                       width={800}
                       height={500}
-                      label={step.label}
-                      bgColor={step.accentSoft}
-                      className="w-full aspect-[16/10]"
+                      className="w-full aspect-16/10 object-cover object-top"
                     />
                   </motion.div>
                 </motion.div>
