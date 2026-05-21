@@ -60,7 +60,7 @@ const mockFetch = vi.fn(() =>
 );
 global.fetch = mockFetch;
 
-import HistoryPage from "../[slug]/history";
+import HistoryPage from "../../pages/[slug]/history";
 
 describe("HistoryPage CSR conversion", () => {
   afterEach(() => {

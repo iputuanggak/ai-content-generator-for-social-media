@@ -91,7 +91,7 @@ const mockFetch = vi.fn(() =>
 );
 global.fetch = mockFetch as unknown as typeof fetch;
 
-import DashboardPage from "../[slug]/index";
+import DashboardPage from "../../pages/[slug]/index";
 
 describe("DashboardPage email verification redirect", () => {
   afterEach(() => {

@@ -26,7 +26,7 @@ vi.mock("@/lib/auth-client", () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-import LoginPage from "../login";
+import LoginPage from "../../pages/login";
 import { authClient } from "@/lib/auth-client";
 
 function wrap(children: ReactNode) {

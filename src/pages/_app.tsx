@@ -31,7 +31,7 @@ const queryClient = new QueryClient({
 });
 
 const dehydrateOptions = {
-  shouldDehydrateQuery: (query: { queryKey: unknown[] }) => {
+  shouldDehydrateQuery: (query: { queryKey: readonly unknown[] }) => {
     return query.queryKey[0] === "session";
   },
 };

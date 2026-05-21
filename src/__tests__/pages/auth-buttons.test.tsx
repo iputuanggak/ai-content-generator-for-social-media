@@ -31,10 +31,10 @@ vi.mock("next/router", () => ({
   }),
 }));
 
-import LoginPage from "../login";
-import RegisterPage from "../register";
-import OnboardingPage from "../onboarding";
-import AcceptInvitationPage from "../accept-invitation";
+import LoginPage from "../../pages/login";
+import RegisterPage from "../../pages/register";
+import OnboardingPage from "../../pages/onboarding";
+import AcceptInvitationPage from "../../pages/accept-invitation";
 
 const queryClient = new QueryClient();
 

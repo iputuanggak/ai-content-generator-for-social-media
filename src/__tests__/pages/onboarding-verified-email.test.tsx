@@ -6,11 +6,20 @@ import "@testing-library/jest-dom/vitest";
 
 vi.mock("@/lib/auth-client", () => ({
   authClient: {
-    getSession: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } } }),
     organization: {
-      acceptInvitation: vi.fn(),
+      create: vi.fn(),
+      setActive: vi.fn(),
     },
   },
+}));
+
+vi.mock("@/lib/slug", () => ({
+  generateSlug: (s: string) => s.toLowerCase().replace(/\s+/g, "-"),
+  sanitizeSlug: (s: string) => s,
+}));
+
+vi.mock("@/components/form-field", () => ({
+  FormField: ({ label }: { label: string }) => <label>{label}</label>,
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -19,7 +28,7 @@ vi.mock("@/components/ui/button", () => ({
 
 const mockPush = vi.fn();
 vi.mock("next/router", () => ({
-  useRouter: () => ({ push: mockPush, query: { invitationId: "inv-1" } }),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 let mockHookLoading = false;
@@ -28,9 +37,9 @@ vi.mock("@/lib/use-require-verified-email", () => ({
   useRequireVerifiedEmail: () => ({ loading: mockHookLoading }),
 }));
 
-import AcceptInvitationPage from "../accept-invitation";
+import OnboardingPage from "../../pages/onboarding";
 
-describe("AcceptInvitationPage email verification redirect", () => {
+describe("OnboardingPage email verification redirect", () => {
   afterEach(() => {
     cleanup();
     mockPush.mockClear();
@@ -40,14 +49,14 @@ describe("AcceptInvitationPage email verification redirect", () => {
   it("renders nothing when useRequireVerifiedEmail returns loading", () => {
     mockHookLoading = true;
 
-    const { container } = render(<AcceptInvitationPage />);
+    const { container } = render(<OnboardingPage />);
     expect(container.innerHTML).toBe("");
   });
 
-  it("renders content when useRequireVerifiedEmail returns not loading", async () => {
+  it("renders content when useRequireVerifiedEmail returns not loading", () => {
     mockHookLoading = false;
 
-    render(<AcceptInvitationPage />);
-    expect((await screen.findAllByText("Accept Invitation")).length).toBeGreaterThan(0);
+    render(<OnboardingPage />);
+    expect(screen.getByText("Create your Team")).toBeInTheDocument();
   });
 });

@@ -77,7 +77,7 @@ const mockFetch = vi.fn(() =>
 );
 global.fetch = mockFetch;
 
-import HistoryDetailPage from "../[slug]/history/[id]";
+import HistoryDetailPage from "../../pages/[slug]/history/[id]";
 
 describe("HistoryDetailPage email verification redirect", () => {
   afterEach(() => {

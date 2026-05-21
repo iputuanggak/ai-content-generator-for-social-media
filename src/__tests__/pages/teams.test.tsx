@@ -51,7 +51,7 @@ vi.mock("@/lib/use-require-verified-email", () => ({
   useRequireVerifiedEmail: () => ({ loading: mockHookLoading }),
 }));
 
-import TeamsPage, { getServerSideProps } from "../teams";
+import TeamsPage, { getServerSideProps } from "../../pages/teams";
 
 afterEach(() => {
   cleanup();

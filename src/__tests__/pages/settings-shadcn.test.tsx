@@ -48,7 +48,7 @@ const brandSettingsResponse = {
   isAdmin: true,
 };
 
-import SettingsPage from "../[slug]/settings";
+import SettingsPage from "../../pages/[slug]/settings";
 
 describe("SettingsPage CSR", () => {
   afterEach(() => {

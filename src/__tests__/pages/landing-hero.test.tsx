@@ -53,7 +53,7 @@ const { motionMock } = vi.hoisted(() => {
 vi.mock("framer-motion", () => motionMock);
 vi.mock("motion/react", () => motionMock);
 
-import LandingPage from "../index";
+import LandingPage from "../../pages/index";
 
 afterEach(cleanup);
 

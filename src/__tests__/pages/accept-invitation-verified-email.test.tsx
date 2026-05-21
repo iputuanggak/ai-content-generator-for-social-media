@@ -6,20 +6,11 @@ import "@testing-library/jest-dom/vitest";
 
 vi.mock("@/lib/auth-client", () => ({
   authClient: {
+    getSession: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } } }),
     organization: {
-      create: vi.fn(),
-      setActive: vi.fn(),
+      acceptInvitation: vi.fn(),
     },
   },
-}));
-
-vi.mock("@/lib/slug", () => ({
-  generateSlug: (s: string) => s.toLowerCase().replace(/\s+/g, "-"),
-  sanitizeSlug: (s: string) => s,
-}));
-
-vi.mock("@/components/form-field", () => ({
-  FormField: ({ label }: { label: string }) => <label>{label}</label>,
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -28,7 +19,7 @@ vi.mock("@/components/ui/button", () => ({
 
 const mockPush = vi.fn();
 vi.mock("next/router", () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, query: { invitationId: "inv-1" } }),
 }));
 
 let mockHookLoading = false;
@@ -37,9 +28,9 @@ vi.mock("@/lib/use-require-verified-email", () => ({
   useRequireVerifiedEmail: () => ({ loading: mockHookLoading }),
 }));
 
-import OnboardingPage from "../onboarding";
+import AcceptInvitationPage from "../../pages/accept-invitation";
 
-describe("OnboardingPage email verification redirect", () => {
+describe("AcceptInvitationPage email verification redirect", () => {
   afterEach(() => {
     cleanup();
     mockPush.mockClear();
@@ -49,14 +40,14 @@ describe("OnboardingPage email verification redirect", () => {
   it("renders nothing when useRequireVerifiedEmail returns loading", () => {
     mockHookLoading = true;
 
-    const { container } = render(<OnboardingPage />);
+    const { container } = render(<AcceptInvitationPage />);
     expect(container.innerHTML).toBe("");
   });
 
-  it("renders content when useRequireVerifiedEmail returns not loading", () => {
+  it("renders content when useRequireVerifiedEmail returns not loading", async () => {
     mockHookLoading = false;
 
-    render(<OnboardingPage />);
-    expect(screen.getByText("Create your Team")).toBeInTheDocument();
+    render(<AcceptInvitationPage />);
+    expect((await screen.findAllByText("Accept Invitation")).length).toBeGreaterThan(0);
   });
 });

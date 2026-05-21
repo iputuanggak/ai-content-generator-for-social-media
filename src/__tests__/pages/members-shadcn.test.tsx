@@ -66,7 +66,7 @@ const membersResponse = {
   isAdmin: true,
 };
 
-import MembersPage from "../[slug]/members";
+import MembersPage from "../../pages/[slug]/members";
 
 describe("MembersPage CSR", () => {
   afterEach(() => {

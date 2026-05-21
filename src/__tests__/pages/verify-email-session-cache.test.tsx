@@ -31,7 +31,7 @@ vi.mock("@/lib/smart-redirect", () => ({
   getSmartRedirectLogic: () => "/teams",
 }));
 
-import VerifyEmailPage from "../verify-email";
+import VerifyEmailPage from "../../pages/verify-email";
 
 function wrap(children: ReactNode) {
   return (

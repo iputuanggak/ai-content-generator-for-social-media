@@ -10,17 +10,22 @@ vi.mock("@/components/layout/DashboardLayout", () => ({
   ),
 }));
 
+vi.mock("@/components/confirm-dialog", () => ({
+  ConfirmDialog: () => null,
+}));
+
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 const mockPush = vi.fn();
 vi.mock("next/router", () => ({
-  useRouter: () => ({ push: mockPush, pathname: "/[slug]/settings", query: { slug: "acme" } }),
+  useRouter: () => ({ push: mockPush, pathname: "/[slug]/members", query: { slug: "acme" } }),
 }));
 
 let teamContextValue = {
   userName: "Test User",
+  userId: "user-1",
   teamName: "Test Team",
   teamId: "team-1" as string | null,
   slug: "acme",
@@ -32,38 +37,12 @@ vi.mock("@/lib/team-context", () => ({
   useTeam: () => teamContextValue,
 }));
 
-vi.mock("@/lib/platform-metadata", () => ({
-  PLATFORM_OPTIONS: [
-    { value: "twitter", label: "Twitter / X" },
-    { value: "linkedin", label: "LinkedIn" },
-  ],
-}));
-
-vi.mock("@/components/ui/textarea", () => ({
-  Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
-    <textarea {...props} />
-  ),
-}));
-
-vi.mock("@/components/ui/select", () => ({
-  Select: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SelectTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SelectItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SelectValue: () => <span />,
-}));
-
 vi.mock("@/components/ui/input", () => ({
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
 }));
 
 vi.mock("@/components/ui/button", () => ({
   Button: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
-}));
-
-vi.mock("@/components/ui/toggle-group", () => ({
-  ToggleGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  ToggleGroupItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@/components/content-skeleton", () => ({
@@ -79,9 +58,9 @@ vi.mock("@/lib/use-require-verified-email", () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-import SettingsPage from "../[slug]/settings";
+import MembersPage from "../../pages/[slug]/members";
 
-describe("SettingsPage email verification redirect", () => {
+describe("MembersPage email verification redirect", () => {
   afterEach(() => {
     cleanup();
     mockPush.mockClear();
@@ -89,6 +68,7 @@ describe("SettingsPage email verification redirect", () => {
     mockHookLoading = false;
     teamContextValue = {
       userName: "Test User",
+      userId: "user-1",
       teamName: "Test Team",
       teamId: "team-1",
       slug: "acme",
@@ -100,7 +80,7 @@ describe("SettingsPage email verification redirect", () => {
   it("renders nothing when useRequireVerifiedEmail returns loading", () => {
     mockHookLoading = true;
 
-    const { container } = render(<SettingsPage />);
+    const { container } = render(<MembersPage />);
     expect(container.innerHTML).toBe("");
   });
 
@@ -110,17 +90,14 @@ describe("SettingsPage email verification redirect", () => {
       ok: true,
       json: () =>
         Promise.resolve({
-          brandVoice: "",
-          defaultTone: "professional",
-          activePlatforms: [],
-          modelId: "",
+          members: [],
           isAdmin: true,
         }),
     });
 
-    render(<SettingsPage />);
+    render(<MembersPage />);
     await waitFor(() => {
-      expect(screen.getAllByText("Brand Settings").length).toBeGreaterThan(0);
+      expect(screen.getByText("Team Members")).toBeInTheDocument();
     });
   });
 });
