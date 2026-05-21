@@ -7,6 +7,8 @@ import { getSmartRedirect } from "@/lib/smart-redirect";
 const SESSION_COOKIES = [
   "better-auth.session_token",
   "better-auth.session_token.0",
+  "__Secure-better-auth.session_token",
+  "__Secure-better-auth.session_token.0",
 ];
 
 const EXCLUDED_PREFIXES = [

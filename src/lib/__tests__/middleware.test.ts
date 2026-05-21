@@ -5,6 +5,8 @@ type CookieValue = { name: string; value: string };
 const SESSION_COOKIES = [
   "better-auth.session_token",
   "better-auth.session_token.0",
+  "__Secure-better-auth.session_token",
+  "__Secure-better-auth.session_token.0",
 ];
 
 const AUTH_ROUTES = ["/login", "/register"];
@@ -72,6 +74,13 @@ describe("middleware logic", () => {
     it("recognizes chunked session cookie variant", () => {
       const result = middlewareLogic("/acme", [
         { name: "better-auth.session_token.0", value: "chunk" },
+      ]);
+      expect(result.action).toBe("next");
+    });
+
+    it("recognizes __Secure- prefixed session cookie", () => {
+      const result = middlewareLogic("/acme", [
+        { name: "__Secure-better-auth.session_token", value: "abc" },
       ]);
       expect(result.action).toBe("next");
     });

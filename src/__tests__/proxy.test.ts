@@ -6,6 +6,8 @@ type CookieValue = { name: string; value: string };
 const SESSION_COOKIES = [
   "better-auth.session_token",
   "better-auth.session_token.0",
+  "__Secure-better-auth.session_token",
+  "__Secure-better-auth.session_token.0",
 ];
 
 const EXCLUDED_PREFIXES = [
@@ -208,6 +210,17 @@ describe("proxy auth gate", () => {
       const result = await proxyLogic({
         pathname: "/acme-marketing",
         cookies: [{ name: "better-auth.session_token.0", value: "chunk" }],
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
+      });
+      expect(result.action).toBe("next");
+    });
+
+    it("recognizes __Secure- prefixed session cookie", async () => {
+      const result = await proxyLogic({
+        pathname: "/acme-marketing",
+        cookies: [{ name: "__Secure-better-auth.session_token", value: "abc" }],
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
         getSession: async () => ({ user: { emailVerified: true } }),
