@@ -6,15 +6,15 @@ const stats = [
   {
     value: "10,000+",
     label: "Posts generated",
-    accent: "var(--coral)",
-    accentSoft: "var(--coral-soft)",
+    accent: "var(--green-botanical)",
+    accentSoft: "var(--green-soft)",
     testId: "stat-posts",
   },
   {
     value: "500+",
     label: "Marketing teams",
-    accent: "var(--amber)",
-    accentSoft: "var(--amber-soft)",
+    accent: "var(--primary)",
+    accentSoft: "var(--secondary)",
     testId: "stat-teams",
   },
   {

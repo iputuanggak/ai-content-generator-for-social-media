@@ -154,6 +154,7 @@ export function HowItWorksStepper() {
     <section
       data-testid="how-it-works"
       className="relative py-24 lg:py-32 px-6 overflow-hidden"
+      id="how-it-works"
     >
       <BotanicalBgShape
         color="var(--primary)"
@@ -194,7 +195,7 @@ export function HowItWorksStepper() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-60px" }}
-          className="relative flex flex-col items-center"
+          className="relative flex flex-col items-center gap-12 md:gap-16 lg:gap-20"
         >
           {steps.map((step, i) => {
             const isReversed = i % 2 === 1;
@@ -208,7 +209,7 @@ export function HowItWorksStepper() {
                 >
                   <motion.div
                     variants={badgeVariants}
-                    className={`flex flex-col items-start gap-5 ${
+                    className={`flex flex-col items-center lg:items-start gap-5 ${
                       isReversed ? "lg:order-2 lg:text-left" : "lg:text-left"
                     } text-center mx-auto lg:mx-0 max-w-md`}
                   >
@@ -255,12 +256,12 @@ export function HowItWorksStepper() {
                   </motion.div>
                 </motion.div>
 
-                {i < steps.length - 1 && (
+                {/* {i < steps.length - 1 && (
                   <VineConnector
                     color={step.accent}
                     flip={isReversed}
                   />
-                )}
+                )} */}
               </div>
             );
           })}

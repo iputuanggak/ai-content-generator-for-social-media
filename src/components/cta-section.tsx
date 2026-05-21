@@ -370,14 +370,14 @@ export function CtaSection() {
               className="group relative inline-flex items-center justify-center rounded-xl px-8 py-4 text-base font-semibold text-white transition-all duration-300 hover:scale-[1.03]"
               style={{
                 background:
-                  "linear-gradient(135deg, var(--coral), var(--amber))",
+                  "linear-gradient(135deg, var(--primary), var(--green-botanical))",
               }}
             >
               <span
                 className="absolute -inset-1 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                 style={{
                   background:
-                    "linear-gradient(135deg, var(--coral), var(--amber))",
+                    "linear-gradient(135deg, var(--primary), var(--green-botanical))",
                   filter: "blur(16px)",
                   opacity: 0.4,
                 }}

@@ -93,10 +93,9 @@ const fadeUp = {
 
 const footerLinks = {
   product: [
-    { label: "Features", href: "#" },
+    { label: "Features", href: "#features" },
     { label: "How it Works", href: "#how-it-works" },
-    { label: "Pricing", href: "#" },
-    { label: "FAQ", href: "#" },
+    { label: "FAQ", href: "#faq" },
   ],
   company: [
     { label: "About", href: "#" },

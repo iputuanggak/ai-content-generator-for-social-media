@@ -71,7 +71,7 @@ const cardVariants = {
 
 export function BentoFeatureGrid() {
   return (
-    <section className="w-full py-24 px-4 sm:px-6 lg:px-8">
+    <section className="w-full py-24 px-4 sm:px-6 lg:px-8" id="features">
       <div className="mx-auto max-w-6xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

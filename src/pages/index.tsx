@@ -1,4 +1,5 @@
 import { LandingNav } from "@/components/landing-nav";
+import { DummyBanner } from "@/components/dummy-banner";
 import { HeroSection } from "@/components/hero-section";
 import { PlatformBadges } from "@/components/platform-badges";
 import { SocialProofBar } from "@/components/social-proof-bar";
@@ -15,6 +16,7 @@ import { MinimalFooter } from "@/components/minimal-footer";
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <DummyBanner />
       <LandingNav />
       <HeroSection />
       <PlatformBadges />

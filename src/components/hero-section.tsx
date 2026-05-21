@@ -27,7 +27,11 @@ const scaleIn = {
     opacity: 1,
     scale: 1,
     y: 0,
-    transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] as const, delay: 0.3 },
+    transition: {
+      duration: 0.9,
+      ease: [0.22, 1, 0.36, 1] as const,
+      delay: 0.3,
+    },
   },
 };
 
@@ -186,11 +190,11 @@ function OrganicCurve({
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-        <motion.div
-          {...floatingLeaf}
-          className="absolute -left-8 top-[8%]"
-        >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10"
+      >
+        <motion.div {...floatingLeaf} className="absolute -left-8 top-[8%]">
           <BotanicalLeaf color="var(--green-botanical)" size={160} />
         </motion.div>
 
@@ -250,9 +254,7 @@ export function HeroSection() {
           style={{ transform: "rotate(-15deg)" }}
         />
 
-        <OrganicCurve
-          className="absolute left-0 top-[30%] w-[60%] h-auto"
-        />
+        <OrganicCurve className="absolute left-0 top-[30%] w-[60%] h-auto" />
 
         <OrganicCurve
           className="absolute right-0 bottom-[20%] w-[50%] h-auto"
@@ -340,13 +342,16 @@ export function HeroSection() {
             format.
           </motion.p>
 
-          <motion.div variants={fadeUp} className="flex items-center justify-center gap-4">
+          <motion.div
+            variants={fadeUp}
+            className="flex items-center justify-center gap-4"
+          >
             <Button
               asChild
               size="lg"
               className="h-11 px-7 text-base font-semibold rounded-xl shadow-lg transition-all duration-300 hover:scale-[1.03] hover:shadow-xl"
               style={{
-                background: "var(--coral)",
+                background: "var(--primary)",
                 color: "white",
               }}
             >
@@ -400,18 +405,21 @@ export function HeroSection() {
                   />
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: "var(--green-botanical)", opacity: 0.7 }}
+                    style={{
+                      backgroundColor: "var(--green-botanical)",
+                      opacity: 0.7,
+                    }}
                   />
                 </div>
                 <div
                   className="flex-1 text-center text-xs font-medium"
                   style={{ color: "var(--muted-foreground)" }}
                 >
-                  lotus.app/dashboard
+                  dashboard
                 </div>
                 <div className="w-16" />
               </div>
-               <img
+              <img
                 src={"images/ai content generator dashboard.avif"}
                 className="w-full aspect-[16/9] min-h-[300px] sm:min-h-[400px] lg:min-h-[520px]"
                 width={1100}
@@ -440,20 +448,7 @@ export function HeroSection() {
         </motion.div>
       </div>
 
-      <div className="relative w-full mt-[-1px]">
-        <svg
-          viewBox="0 0 1440 100"
-          preserveAspectRatio="none"
-          className="w-full block"
-          style={{ height: "60px" }}
-          aria-hidden="true"
-        >
-          <path
-            d="M0,40 C240,80 480,10 720,50 C960,90 1200,20 1440,45 L1440,100 L0,100 Z"
-            fill="var(--background)"
-          />
-        </svg>
-      </div>
+      <div className="relative w-full h-15"></div>
     </section>
   );
 }

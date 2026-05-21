@@ -130,7 +130,7 @@ export function TestimonialCards() {
               className="group relative flex flex-col rounded-2xl border border-border bg-card p-7 pt-0 overflow-hidden shadow-sm transition-shadow duration-300 hover:shadow-lg"
             >
               <div
-                className="h-1.5 w-full rounded-t-2xl"
+                className="h-1.5 w-full rounded-b-2xl"
                 style={{ backgroundColor: t.accent }}
               />
 

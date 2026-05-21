@@ -216,7 +216,7 @@ export function ComparisonSection() {
           >
             <div
               aria-hidden="true"
-              className="absolute -top-px -left-px -right-px h-2 rounded-t-2xl"
+              className="absolute -top-px left-10 right-10 h-2 rounded-b-2xl "
               style={{
                 background:
                   "linear-gradient(90deg, var(--primary), var(--green-botanical), var(--primary))",

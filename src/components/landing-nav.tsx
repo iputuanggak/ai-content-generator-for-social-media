@@ -64,10 +64,7 @@ export function LandingNav() {
                 fill="currentColor"
               />
             </svg>
-            <span
-              className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
-              style={{ background: "var(--coral)" }}
-            />
+           
           </div>
           <span className="font-heading text-xl text-foreground">Lotus</span>
         </Link>
@@ -80,7 +77,7 @@ export function LandingNav() {
           </Link>
           <Button
             asChild
-            className="transition-all duration-300 hover:bg-gradient-to-r hover:from-[var(--coral)] hover:to-[var(--amber)] hover:text-white hover:border-transparent"
+            className="transition-all duration-300 hover:bg-primary hover:text-white hover:border-transparent"
           >
             <Link href="/register">Get started</Link>
           </Button>

@@ -72,27 +72,27 @@ const companies = [
 ];
 
 export function SocialProofBar() {
-  const doubled = [...companies, ...companies];
+  const repeated = Array.from({ length: 5 }, () => companies).flat();
 
   return (
-    <section className="py-14 px-6 bg-card overflow-hidden">
-      <div className="max-w-5xl mx-auto text-center mb-8">
+    <section className="py-14 bg-card overflow-hidden">
+      <div className="max-w-5xl mx-auto text-center mb-8 px-6">
         <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           Trusted by forward-thinking teams
         </h2>
       </div>
 
       <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-20 z-10 pointer-events-none"
+        <div className="absolute left-0 top-0 bottom-0 w-32 z-10 pointer-events-none"
           style={{ background: "linear-gradient(to right, var(--card), transparent)" }}
         />
-        <div className="absolute right-0 top-0 bottom-0 w-20 z-10 pointer-events-none"
+        <div className="absolute right-0 top-0 bottom-0 w-32 z-10 pointer-events-none"
           style={{ background: "linear-gradient(to left, var(--card), transparent)" }}
         />
 
         <motion.div
           className="flex items-center gap-14 w-max"
-          animate={{ x: ["0%", "-50%"] }}
+          animate={{ x: ["0%", "-20%"] }}
           transition={{
             x: {
               repeat: Infinity,
@@ -102,7 +102,7 @@ export function SocialProofBar() {
             },
           }}
         >
-          {doubled.map((company, i) => (
+          {repeated.map((company, i) => (
             <div
               key={`${company.name}-${i}`}
               className="flex items-center gap-2.5 text-muted-foreground/50 shrink-0 select-none"

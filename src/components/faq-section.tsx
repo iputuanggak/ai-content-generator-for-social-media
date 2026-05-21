@@ -145,6 +145,7 @@ export function FaqSection() {
     <section
       data-testid="faq-section"
       className="relative w-full py-24 px-4 sm:px-6 lg:px-8 overflow-hidden"
+      id="faq"
     >
       <BotanicalLeaf className="pointer-events-none absolute -top-4 -left-8 w-32 h-52 text-[var(--green-botanical)] rotate-12" />
       <BotanicalLeaf className="pointer-events-none absolute -bottom-4 -right-8 w-28 h-44 text-[var(--green-botanical)] -rotate-15 scale-x-[-1]" />
