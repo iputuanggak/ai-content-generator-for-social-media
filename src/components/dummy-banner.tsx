@@ -20,7 +20,7 @@ export function DummyBanner() {
             className="flex items-center justify-center gap-3 px-4 py-2.5 text-sm font-medium"
             style={{
               background: "var(--green-soft)",
-              color: "var(--green-botanical)",
+              color: "var(--primary)",
             }}
           >
             <span className="inline-flex items-center gap-1.5">
