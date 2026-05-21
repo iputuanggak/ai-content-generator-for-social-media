@@ -4,8 +4,10 @@ import { eq, and, ilike, gte, lte, desc } from "drizzle-orm";
 import { generation } from "@/lib/db/schema";
 import { withSlugSession } from "@/lib/with-session";
 import type { Tone } from "@/lib/content-adapter";
+import { TONE_OPTIONS } from "@/lib/content-adapter";
 import { generateContent } from "@/lib/generation-service";
 import { initSSE, sendSSEEvent, closeSSE } from "@/lib/sse";
+import { MAX_TOPIC_LENGTH, validateLength } from "@/lib/input-validation";
 
 export const config = {
   api: {
@@ -75,8 +77,10 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   if (!topic || typeof topic !== "string" || topic.trim() === "") {
     return res.status(400).json({ error: "topic is required" });
   }
-  if (!tone) {
-    return res.status(400).json({ error: "tone is required" });
+  const topicErr = validateLength("topic", topic, MAX_TOPIC_LENGTH);
+  if (topicErr) return res.status(400).json({ error: topicErr });
+  if (!tone || !TONE_OPTIONS.some((t) => t.value === tone)) {
+    return res.status(400).json({ error: "tone must be a valid value" });
   }
 
   initSSE(res);

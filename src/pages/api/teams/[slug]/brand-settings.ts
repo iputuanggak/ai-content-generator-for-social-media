@@ -3,7 +3,9 @@ import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { brandSettings } from "@/lib/db/schema";
 import type { Tone, Platform } from "@/lib/content-adapter";
-import { withSlugSession } from "@/lib/with-session";
+import { isValidModelId } from "@/lib/content-adapter";
+import { withSlugSession, withAdminSlugSession, isAdminRole } from "@/lib/with-session";
+import { MAX_BRAND_VOICE_LENGTH, validateLength } from "@/lib/input-validation";
 
 const VALID_TONES: Tone[] = ["professional", "casual", "humorous", "inspirational"];
 const VALID_PLATFORMS: Platform[] = [
@@ -35,18 +37,12 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
   if (rows.length === 0) return res.status(404).json({ error: "Brand settings not found" });
 
-  const isAdmin = ctx.role === "owner" || ctx.role === "admin";
-
-  return res.status(200).json({ ...rows[0], role: ctx.role, isAdmin });
+  return res.status(200).json({ ...rows[0], role: ctx.role, isAdmin: isAdminRole(ctx.role) });
 }
 
 async function handlePut(req: NextApiRequest, res: NextApiResponse) {
-  const ctx = await withSlugSession(req, res);
+  const ctx = await withAdminSlugSession(req, res);
   if (!ctx) return;
-
-  if (ctx.role !== "owner" && ctx.role !== "admin") {
-    return res.status(403).json({ error: "Only team admins can edit brand settings" });
-  }
 
   const { brandVoice, defaultTone, activePlatforms, modelId } = req.body as {
     brandVoice?: string;
@@ -65,6 +61,15 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse) {
         return res.status(400).json({ error: `Invalid platform: ${p}` });
       }
     }
+  }
+
+  if (modelId !== undefined && !isValidModelId(modelId)) {
+    return res.status(400).json({ error: "Invalid model ID" });
+  }
+
+  if (brandVoice !== undefined) {
+    const bvErr = validateLength("brandVoice", brandVoice, MAX_BRAND_VOICE_LENGTH);
+    if (bvErr) return res.status(400).json({ error: bvErr });
   }
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };

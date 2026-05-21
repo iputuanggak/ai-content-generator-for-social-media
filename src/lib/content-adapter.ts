@@ -71,6 +71,14 @@ export const MODEL_OPTIONS: { group: string; models: { value: string; label: str
   },
 ];
 
+const VALID_MODEL_IDS = new Set(
+  MODEL_OPTIONS.flatMap((g) => g.models.map((m) => m.value))
+);
+
+export function isValidModelId(id: string): boolean {
+  return VALID_MODEL_IDS.has(id);
+}
+
 export interface PromptPair {
   systemPrompt: string;
   userPrompt: string;

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { platformOutput } from "@/lib/db/schema";
 import { withSlugSession } from "@/lib/with-session";
 import { fetchPlatformOutputForOrg } from "@/lib/platform-output-ownership";
+import { MAX_EDITED_CONTENT_LENGTH, validateLength } from "@/lib/input-validation";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "PATCH") {
@@ -25,6 +26,8 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
   if (typeof editedContent !== "string") {
     return res.status(400).json({ error: "editedContent is required" });
   }
+  const lenErr = validateLength("editedContent", editedContent, MAX_EDITED_CONTENT_LENGTH);
+  if (lenErr) return res.status(400).json({ error: lenErr });
 
   const ownership = await fetchPlatformOutputForOrg(id, ctx.orgId);
   if (ownership.status === "not-found") {

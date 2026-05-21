@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { member } from "@/lib/db/schema";
-import { withSlugSession } from "@/lib/with-session";
+import { withAdminSlugSession } from "@/lib/with-session";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "DELETE") return handleDelete(req, res);
@@ -10,14 +10,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleDelete(req: NextApiRequest, res: NextApiResponse) {
-  const ctx = await withSlugSession(req, res);
+  const ctx = await withAdminSlugSession(req, res);
   if (!ctx) return;
 
   const memberId = req.query.memberId as string;
-
-  if (ctx.role !== "owner" && ctx.role !== "admin") {
-    return res.status(403).json({ error: "Only team admins can remove members" });
-  }
 
   const targetMemberRows = await db
     .select()

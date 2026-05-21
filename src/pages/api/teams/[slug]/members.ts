@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { member, user } from "@/lib/db/schema";
-import { buildReqHeaders, withSlugSession } from "@/lib/with-session";
+import { buildReqHeaders, withSlugSession, withAdminSlugSession, isAdminRole } from "@/lib/with-session";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "GET") return handleGet(req, res);
@@ -32,18 +32,12 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     .innerJoin(user, eq(member.userId, user.id))
     .where(eq(member.organizationId, ctx.orgId));
 
-  const isAdmin = ctx.role === "owner" || ctx.role === "admin";
-
-  return res.status(200).json({ members: rows, isAdmin });
+  return res.status(200).json({ members: rows, isAdmin: isAdminRole(ctx.role) });
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
-  const ctx = await withSlugSession(req, res);
+  const ctx = await withAdminSlugSession(req, res);
   if (!ctx) return;
-
-  if (ctx.role !== "owner" && ctx.role !== "admin") {
-    return res.status(403).json({ error: "Only team admins can invite members" });
-  }
 
   const { email } = req.body as { email?: string };
   if (!email || !email.includes("@")) {
