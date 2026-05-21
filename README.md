@@ -4,9 +4,9 @@
 
 A fullstack SaaS application that generates platform-adapted social media content from a single prompt. Marketing teams enter a topic, select a tone, and Lotus produces tailored posts for 8 platforms simultaneously — each optimized for that platform's format, character limits, and audience conventions.
 
-**[Live Demo →](#)** *(coming soon)*
+**[Live Demo →](lotus.putuangga.com)**
 
-![Lotus Dashboard](#) *(screenshot coming soon)*
+![Lotus Dashboard](/public/images/ai%20content%20generator%20dashboard.avif) 
 
 ---
 
@@ -38,15 +38,13 @@ A fullstack SaaS application that generates platform-adapted social media conten
 - **Onboarding flow** — first-time team creation after registration
 - **Responsive design** — sidebar layout on desktop, drawer on mobile
 
-![Landing Page](#) *(screenshot coming soon)*
-
 ---
 
 ## Architecture Highlights
 
 - **SSE streaming for AI generation** — each platform's result streams to the client independently via `text/event-stream`, enabling progressive rendering
 - **Slug-based multi-tenancy** — team scoping via URL slugs with membership verification at the API layer
-- **Custom OTP auth flow** — purpose-built email verification with attempt tracking, cooldown, and expiry (see [`docs/adr/`](docs/adr/))
+- **Custom OTP auth flow** — purpose-built email verification with attempt tracking, cooldown, and expiry
 - **Dependency injection for testability** — services accept `fetchFn` and `db` as parameters, enabling 55+ test files with mocked external dependencies
 - **Concurrent AI calls** — all active platforms generate in parallel via `Promise.all`, with results streamed as they resolve
 
