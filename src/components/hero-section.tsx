@@ -286,8 +286,8 @@ export function HeroSection() {
             <span
               className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium tracking-wide uppercase"
               style={{
-                backgroundColor: "var(--coral-soft)",
-                color: "var(--coral)",
+                backgroundColor: "var(--green-soft)",
+                color: "var(--green-botanical)",
               }}
             >
               <svg
