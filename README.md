@@ -58,10 +58,10 @@ A fullstack SaaS application that generates platform-adapted social media conten
 | **Styling** | Tailwind CSS v4, shadcn/ui (radix-nova), HugeIcons, Motion (Framer Motion) |
 | **Auth** | Better Auth with organization plugin — custom OTP flow on top |
 | **Database** | Neon (serverless Postgres) |
-| **ORM** | Drizzle ORM |
+| **ORM** | Drizzle ORM (PostgreSQL) |
 | **AI Provider** | OpenRouter — Google Gemini, OpenAI GPT-4.1, Anthropic Claude (model configurable per team) |
 | **Email** | Resend + React Email (OTP codes, team invitations) |
-| **State Management** | TanStack Query v5 with localStorage persistence |
+| **State Management** | TanStack Query v5 (known as React Query) with localStorage persistence |
 | **Notifications** | Sonner |
 | **Testing** | Vitest + Testing Library + jsdom |
 | **Deployment** | Vercel |
