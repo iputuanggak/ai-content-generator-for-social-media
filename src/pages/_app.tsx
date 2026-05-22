@@ -1,10 +1,16 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
+import Head from "next/head";
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { DM_Serif_Display, Plus_Jakarta_Sans } from "next/font/google";
+
+const APP_TITLE = "Lotus — AI Content Generator for Social Media";
+const APP_DESCRIPTION =
+  "Generate platform-adapted social media content from a single prompt. AI-powered posts for Instagram, TikTok, LinkedIn, Twitter, and more.";
+const OG_IMAGE = "/og-image.png";
 
 const dmSerifDisplay = DM_Serif_Display({
   subsets: ["latin"],
@@ -60,6 +66,18 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <div className={`${dmSerifDisplay.variable} ${plusJakartaSans.variable}`}>
+      <Head>
+        <title>{APP_TITLE}</title>
+        <meta name="description" content={APP_DESCRIPTION} />
+        <meta property="og:title" content={APP_TITLE} />
+        <meta property="og:description" content={APP_DESCRIPTION} />
+        <meta property="og:image" content={OG_IMAGE} />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={APP_TITLE} />
+        <meta name="twitter:description" content={APP_DESCRIPTION} />
+        <meta name="twitter:image" content={OG_IMAGE} />
+      </Head>
       <QueryClientProvider client={queryClient}>
         <Component {...pageProps} />
       </QueryClientProvider>
