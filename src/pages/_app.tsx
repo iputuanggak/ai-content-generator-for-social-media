@@ -6,12 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { DM_Serif_Display, Plus_Jakarta_Sans } from "next/font/google";
-import { GoogleAnalytics } from "@next/third-parties/google";
+import { GoogleTagManager } from "@next/third-parties/google";
 
 const APP_TITLE = "Lotus — AI Content Generator for Social Media";
 const APP_DESCRIPTION =
   "Generate platform-adapted social media content from a single prompt. AI-powered posts for Instagram, TikTok, LinkedIn, Twitter, and more.";
-const OG_IMAGE = "/opengraph-image.png";
+const OG_IMAGE = `${process.env.NEXT_PUBLIC_APP_URL}/opengraph-image.png`;
 
 const dmSerifDisplay = DM_Serif_Display({
   subsets: ["latin"],
@@ -81,7 +81,7 @@ export default function App({ Component, pageProps }: AppProps) {
       </Head>
       <QueryClientProvider client={queryClient}>
         <Component {...pageProps} />
-        <GoogleAnalytics gaId="G-ZJ3XY0RND4" />
+        <GoogleTagManager gtmId="GTM-5N6WSWTZ" />
       </QueryClientProvider>
     </div>
   );
