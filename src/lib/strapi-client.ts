@@ -15,6 +15,77 @@ export interface StrapiCategory {
   slug: string;
 }
 
+// ─── Blocks Types (Strapi v5 Blocks field) ────────────────────────────────────
+
+export interface StrapiTextNode {
+  type: "text";
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  strikethrough?: boolean;
+  code?: boolean;
+}
+
+export interface StrapiLinkNode {
+  type: "link";
+  url: string;
+  children: StrapiTextNode[];
+}
+
+export type StrapiInlineNode = StrapiTextNode | StrapiLinkNode;
+
+export interface StrapiParagraphBlock {
+  type: "paragraph";
+  children: StrapiInlineNode[];
+}
+
+export interface StrapiHeadingBlock {
+  type: "heading";
+  level: 1 | 2 | 3 | 4 | 5 | 6;
+  children: StrapiInlineNode[];
+}
+
+export interface StrapiListItemBlock {
+  type: "list-item";
+  children: StrapiInlineNode[];
+}
+
+export interface StrapiListBlock {
+  type: "list";
+  format: "ordered" | "unordered";
+  children: StrapiListItemBlock[];
+}
+
+export interface StrapiQuoteBlock {
+  type: "quote";
+  children: StrapiInlineNode[];
+}
+
+export interface StrapiCodeBlock {
+  type: "code";
+  children: StrapiTextNode[];
+}
+
+export interface StrapiImageBlock {
+  type: "image";
+  image: {
+    url: string;
+    alternativeText: string | null;
+    width?: number;
+    height?: number;
+  };
+  children: StrapiInlineNode[];
+}
+
+export type StrapiBlock =
+  | StrapiParagraphBlock
+  | StrapiHeadingBlock
+  | StrapiListBlock
+  | StrapiQuoteBlock
+  | StrapiCodeBlock
+  | StrapiImageBlock;
+
 export interface StrapiArticle {
   documentId: string;
   title: string;
@@ -26,6 +97,7 @@ export interface StrapiArticle {
     alternativeText: string | null;
   } | null;
   category: StrapiCategory | null;
+  blocks?: StrapiBlock[];
 }
 
 export interface StrapiPagination {
@@ -164,6 +236,7 @@ export async function getArticleBySlug({
   params.set("filters[slug][$eq]", slug);
   params.set("populate[cover]", "true");
   params.set("populate[category]", "true");
+  params.set("populate[blocks][populate][image]", "true");
 
   const url = `${baseUrl}/api/articles?${params.toString()}`;
 
