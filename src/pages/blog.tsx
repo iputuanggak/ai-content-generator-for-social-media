@@ -1,15 +1,17 @@
 import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 import { GetStaticProps } from "next";
 import { format } from "date-fns";
 import { LandingNav } from "@/components/landing-nav";
 import { MinimalFooter } from "@/components/minimal-footer";
-import { getArticles, StrapiArticle } from "@/lib/strapi-client";
+import { getArticles, getCategories, StrapiArticle, StrapiCategory } from "@/lib/strapi-client";
 
 interface BlogPageProps {
   featuredArticle: StrapiArticle | null;
   articles: StrapiArticle[];
+  categories: StrapiCategory[];
 }
 
 function formatDate(dateString: string): string {
@@ -106,6 +108,54 @@ function FeaturedHeroCard({ article }: { article: StrapiArticle }) {
   );
 }
 
+function CategoryFilter({
+  categories,
+  activeSlug,
+  onChange,
+}: {
+  categories: StrapiCategory[];
+  activeSlug: string | null;
+  onChange: (slug: string | null) => void;
+}) {
+  const tabs = [{ documentId: "__all__", name: "All", slug: null as string | null }, ...categories.map((c) => ({ ...c, slug: c.slug as string | null }))];
+
+  return (
+    <div
+      className="flex flex-wrap gap-2 mb-8"
+      role="tablist"
+      aria-label="Filter by category"
+    >
+      {tabs.map((tab) => {
+        const isActive = tab.slug === activeSlug;
+        return (
+          <button
+            key={tab.documentId}
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(tab.slug)}
+            className="px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2"
+            style={
+              isActive
+                ? {
+                    background: "oklch(0.55 0.14 170)",
+                    color: "oklch(0.98 0.01 170)",
+                    border: "1px solid oklch(0.55 0.14 170)",
+                  }
+                : {
+                    background: "oklch(0.16 0.04 170)",
+                    color: "oklch(0.70 0.06 170)",
+                    border: "1px solid oklch(0.26 0.06 170)",
+                  }
+            }
+          >
+            {tab.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ArticleCard({ article }: { article: StrapiArticle }) {
   return (
     <Link
@@ -145,7 +195,14 @@ function ArticleCard({ article }: { article: StrapiArticle }) {
   );
 }
 
-export default function BlogPage({ featuredArticle, articles }: BlogPageProps) {
+export default function BlogPage({ featuredArticle, articles, categories }: BlogPageProps) {
+  const [activeCategorySlug, setActiveCategorySlug] = useState<string | null>(null);
+
+  const filteredArticles =
+    activeCategorySlug === null
+      ? articles
+      : articles.filter((a) => a.category?.slug === activeCategorySlug);
+
   return (
     <>
       <Head>
@@ -185,14 +242,23 @@ export default function BlogPage({ featuredArticle, articles }: BlogPageProps) {
             </section>
           )}
 
+          {/* Category filter */}
+          {categories.length > 0 && (
+            <CategoryFilter
+              categories={categories}
+              activeSlug={activeCategorySlug}
+              onChange={setActiveCategorySlug}
+            />
+          )}
+
           {/* Articles grid */}
-          {articles.length > 0 && (
+          {filteredArticles.length > 0 && (
             <section aria-label="More articles">
               <h2 className="font-heading text-2xl text-white mb-6">
                 More articles
               </h2>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {articles.map((article) => (
+                {filteredArticles.map((article) => (
                   <ArticleCard key={article.documentId} article={article} />
                 ))}
               </div>
@@ -200,7 +266,7 @@ export default function BlogPage({ featuredArticle, articles }: BlogPageProps) {
           )}
 
           {/* Empty state */}
-          {!featuredArticle && articles.length === 0 && (
+          {!featuredArticle && filteredArticles.length === 0 && (
             <div className="text-center py-24">
               <p className="text-white/40 text-lg">No articles yet. Check back soon!</p>
             </div>
@@ -215,7 +281,10 @@ export default function BlogPage({ featuredArticle, articles }: BlogPageProps) {
 
 export const getStaticProps: GetStaticProps<BlogPageProps> = async () => {
   try {
-    const { data } = await getArticles({ page: 1, pageSize: 9 });
+    const [{ data }, { data: categoriesData }] = await Promise.all([
+      getArticles({ page: 1, pageSize: 9 }),
+      getCategories(),
+    ]);
 
     const featuredArticle = data[0] ?? null;
     const articles = data.slice(1);
@@ -224,6 +293,7 @@ export const getStaticProps: GetStaticProps<BlogPageProps> = async () => {
       props: {
         featuredArticle,
         articles,
+        categories: categoriesData,
       },
       revalidate: 60,
     };
@@ -233,6 +303,7 @@ export const getStaticProps: GetStaticProps<BlogPageProps> = async () => {
       props: {
         featuredArticle: null,
         articles: [],
+        categories: [],
       },
       revalidate: 60,
     };
