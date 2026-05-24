@@ -6,12 +6,13 @@ import { GetStaticProps } from "next";
 import { format } from "date-fns";
 import { LandingNav } from "@/components/landing-nav";
 import { MinimalFooter } from "@/components/minimal-footer";
-import { getArticles, getCategories, StrapiArticle, StrapiCategory } from "@/lib/strapi-client";
+import { getArticles, getCategories, StrapiArticle, StrapiCategory, StrapiPagination } from "@/lib/strapi-client";
 
 interface BlogPageProps {
   featuredArticle: StrapiArticle | null;
   articles: StrapiArticle[];
   categories: StrapiCategory[];
+  pagination: StrapiPagination;
 }
 
 function formatDate(dateString: string): string {
@@ -195,13 +196,53 @@ function ArticleCard({ article }: { article: StrapiArticle }) {
   );
 }
 
-export default function BlogPage({ featuredArticle, articles, categories }: BlogPageProps) {
-  const [activeCategorySlug, setActiveCategorySlug] = useState<string | null>(null);
+const PAGE_SIZE = 9;
 
-  const filteredArticles =
-    activeCategorySlug === null
-      ? articles
-      : articles.filter((a) => a.category?.slug === activeCategorySlug);
+export default function BlogPage({ featuredArticle, articles, categories, pagination }: BlogPageProps) {
+  const [activeCategorySlug, setActiveCategorySlug] = useState<string | null>(null);
+  const [extraArticles, setExtraArticles] = useState<StrapiArticle[]>([]);
+  const [currentPage, setCurrentPage] = useState(pagination.page);
+  const [pageCount, setPageCount] = useState(pagination.pageCount);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // When category changes, reset extra articles and page counter
+  function handleCategoryChange(slug: string | null) {
+    setActiveCategorySlug(slug);
+    setExtraArticles([]);
+    setCurrentPage(1);
+    setPageCount(pagination.pageCount);
+  }
+
+  const baseArticles = activeCategorySlug === null
+    ? articles
+    : articles.filter((a) => a.category?.slug === activeCategorySlug);
+
+  // Extra articles are already filtered by category (fetched with category filter)
+  const filteredArticles = [...baseArticles, ...extraArticles];
+
+  const hasMore = currentPage < pageCount;
+
+  async function handleLoadMore() {
+    setIsLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const params = new URLSearchParams();
+      params.set("page", String(nextPage));
+      params.set("pageSize", String(PAGE_SIZE));
+      if (activeCategorySlug) params.set("categorySlug", activeCategorySlug);
+
+      const res = await fetch(`/api/blog/articles?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setExtraArticles((prev) => [...prev, ...data.data]);
+      setCurrentPage(data.meta.pagination.page);
+      setPageCount(data.meta.pagination.pageCount);
+    } catch {
+      // silently fail; button remains visible so user can retry
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
 
   return (
     <>
@@ -247,7 +288,7 @@ export default function BlogPage({ featuredArticle, articles, categories }: Blog
             <CategoryFilter
               categories={categories}
               activeSlug={activeCategorySlug}
-              onChange={setActiveCategorySlug}
+              onChange={handleCategoryChange}
             />
           )}
 
@@ -262,6 +303,24 @@ export default function BlogPage({ featuredArticle, articles, categories }: Blog
                   <ArticleCard key={article.documentId} article={article} />
                 ))}
               </div>
+
+              {/* Load more button */}
+              {hasMore && (
+                <div className="mt-10 flex justify-center">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="px-8 py-3 rounded-full text-sm font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{
+                      background: "oklch(0.16 0.04 170)",
+                      color: "oklch(0.70 0.06 170)",
+                      border: "1px solid oklch(0.26 0.06 170)",
+                    }}
+                  >
+                    {isLoadingMore ? "Loading…" : "Load more"}
+                  </button>
+                </div>
+              )}
             </section>
           )}
 
@@ -281,11 +340,12 @@ export default function BlogPage({ featuredArticle, articles, categories }: Blog
 
 export const getStaticProps: GetStaticProps<BlogPageProps> = async () => {
   try {
-    const [{ data }, { data: categoriesData }] = await Promise.all([
+    const [{ data, meta }, { data: categoriesData }] = await Promise.all([
       getArticles({ page: 1, pageSize: 9 }),
       getCategories(),
     ]);
 
+    const { pagination } = meta;
     const featuredArticle = data[0] ?? null;
     const articles = data.slice(1);
 
@@ -294,6 +354,7 @@ export const getStaticProps: GetStaticProps<BlogPageProps> = async () => {
         featuredArticle,
         articles,
         categories: categoriesData,
+        pagination,
       },
       revalidate: 60,
     };
@@ -304,6 +365,7 @@ export const getStaticProps: GetStaticProps<BlogPageProps> = async () => {
         featuredArticle: null,
         articles: [],
         categories: [],
+        pagination: { page: 1, pageSize: 9, pageCount: 1, total: 0 },
       },
       revalidate: 60,
     };
