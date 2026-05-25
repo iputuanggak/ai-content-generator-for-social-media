@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { GetServerSideProps } from "next";
 import { auth } from "@/lib/auth";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { UserGroupIcon } from "@hugeicons/core-free-icons";
+import { UserGroupIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
 
 interface Team {
@@ -61,6 +61,22 @@ export default function TeamsPage({ teams, userName }: TeamsPageProps) {
               </span>
             </Link>
           ))}
+          <Link
+            href="/create-team"
+            className="group flex items-center gap-3 rounded-xl border border-dashed border-teal-200 bg-white/50 p-4 shadow-sm transition-all hover:border-primary/30 hover:bg-white hover:shadow-md hover:shadow-primary/10"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
+              <HugeiconsIcon icon={PlusSignIcon} size={20} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-foreground">
+                Create new team
+              </p>
+            </div>
+            <span className="text-muted-foreground transition-colors group-hover:text-primary">
+              →
+            </span>
+          </Link>
         </div>
       </div>
     </div>
