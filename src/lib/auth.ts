@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { randomUUID } from "crypto";
 import { grantStarterCredits } from "@/lib/credit-service";
+import { shouldGrantStarterCredits } from "@/lib/starter-credit-guard";
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -46,8 +47,10 @@ export const auth = betterAuth({
         }
       },
       organizationHooks: {
-        afterCreateOrganization: async ({ organization: org }) => {
-          await Promise.all([
+        afterCreateOrganization: async ({ organization: org, user }) => {
+          const isEligible = await shouldGrantStarterCredits(user.id);
+
+          const promises: Promise<unknown>[] = [
             db.insert(schema.brandSettings).values({
               id: randomUUID(),
               organizationId: org.id,
@@ -66,8 +69,13 @@ export const auth = betterAuth({
               modelId: "google/gemini-2.5-flash",
               updatedAt: new Date(),
             }),
-            grantStarterCredits(org.id),
-          ]);
+          ];
+
+          if (isEligible) {
+            promises.push(grantStarterCredits(org.id));
+          }
+
+          await Promise.all(promises);
         },
       },
     }),
