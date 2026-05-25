@@ -196,7 +196,7 @@ function ArticleCard({ article }: { article: StrapiArticle }) {
   );
 }
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 6;
 
 export default function BlogPage({ featuredArticle, articles, categories, pagination }: BlogPageProps) {
   const [activeCategorySlug, setActiveCategorySlug] = useState<string | null>(null);
@@ -332,7 +332,7 @@ export default function BlogPage({ featuredArticle, articles, categories, pagina
 export const getStaticProps: GetStaticProps<BlogPageProps> = async () => {
   try {
     const [{ data, meta }, { data: categoriesData }] = await Promise.all([
-      getArticles({ page: 1, pageSize: 9 }),
+      getArticles({ page: 1, pageSize: 6 }),
       getCategories(),
     ]);
 
@@ -356,7 +356,7 @@ export const getStaticProps: GetStaticProps<BlogPageProps> = async () => {
         featuredArticle: null,
         articles: [],
         categories: [],
-        pagination: { page: 1, pageSize: 9, pageCount: 1, total: 0 },
+        pagination: { page: 1, pageSize: 6, pageCount: 1, total: 0 },
       },
       revalidate: 60,
     };
