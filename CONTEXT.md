@@ -62,6 +62,24 @@ A request sent by a Team admin or owner to an email address, inviting the recipi
 ### Email Service
 The system responsible for sending transactional emails (OTP codes, invitation emails). Powered by Resend with React Email templates. Sender address is configurable via the `EMAIL_FROM` environment variable.
 
+### Credit
+A unit of consumption for AI content generation. Credits belong to the Team (not individual users). Each Platform Output costs 1 credit. Every regeneration of a Platform Output costs 1 credit. Manual edits are free.
+
+### Credit Batch
+A group of credits added to a Team at one time. Each top-up purchase or starter grant creates one batch. A batch has an initial amount, a remaining balance, and an expiry date. Credits are consumed in FIFO order (oldest batch first). When a batch expires, its remaining credits are no longer usable.
+
+### Credit Top-Up
+The act of purchasing additional credits for a Team. Processed via Stripe Checkout. Any Member can top up. Offered as fixed packages with volume pricing: Starter (100 credits / $5), Growth (500 credits / $20), Pro (2000 credits / $60).
+
+### Starter Credits
+25 free credits granted to a Team when it is created. Behave identically to purchased credits — subject to the same 12-month expiry and FIFO consumption rules.
+
+### Credit Transaction
+An audit record of a single credit event: a top-up, a generation deduction, a regeneration deduction, or a batch expiry. Linked to a Credit Batch and optionally to a Generation or Platform Output.
+
+### Credit Expiry
+Credits expire 12 months after the batch was created. Expired batches' remaining credits become unusable. The system highlights batches expiring within 30 days on the credit history page.
+
 ---
 
 ## Architecture
@@ -74,6 +92,7 @@ The system responsible for sending transactional emails (OTP codes, invitation e
 | Database | Neon (serverless Postgres) |
 | ORM | Drizzle ORM |
 | AI Provider | OpenRouter — default model `google/gemini-2.5-flash`, model is configurable per Team |
+| Payments | Stripe Checkout (hosted page) for credit top-ups |
 | Deployment | Vercel |
 
 ---
