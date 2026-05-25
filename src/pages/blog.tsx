@@ -1,18 +1,12 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useState } from "react";
-import { GetStaticProps } from "next";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { LandingNav } from "@/components/landing-nav";
 import { MinimalFooter } from "@/components/minimal-footer";
-import { getArticles, getCategories, StrapiArticle, StrapiCategory, StrapiPagination } from "@/lib/strapi-client";
+import { StrapiArticle, StrapiCategory, StrapiPagination } from "@/lib/strapi-client";
 
-interface BlogPageProps {
-  featuredArticle: StrapiArticle | null;
-  articles: StrapiArticle[];
-  categories: StrapiCategory[];
-  pagination: StrapiPagination;
-}
+interface BlogPageProps {}
 
 function formatDate(dateString: string): string {
   try {
@@ -196,34 +190,180 @@ function ArticleCard({ article }: { article: StrapiArticle }) {
   );
 }
 
-const PAGE_SIZE = 6;
+function SkeletonCategoryTabs() {
+  return (
+    <div className="flex flex-wrap gap-2 mb-8">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <SkeletonBlock key={i} className="w-16 h-8 !rounded-full" />
+      ))}
+    </div>
+  );
+}
 
-export default function BlogPage({ featuredArticle, articles, categories, pagination }: BlogPageProps) {
+function SkeletonBlock({ className }: { className?: string }) {
+  return (
+    <div
+      className={className}
+      style={{
+        background: "linear-gradient(90deg, oklch(0.94 0.01 170) 25%, oklch(0.90 0.02 170) 50%, oklch(0.94 0.01 170) 75%)",
+        backgroundSize: "200% 100%",
+        animation: "shimmer 1.5s ease-in-out infinite",
+        borderRadius: "0.375rem",
+      }}
+    />
+  );
+}
+
+function SkeletonFeaturedHeroCard() {
+  return (
+    <div
+      className="block overflow-hidden rounded-2xl"
+      style={{
+        background: "oklch(0.97 0.02 170)",
+        border: "1px solid oklch(0.88 0.04 170)",
+        boxShadow: "0 8px 40px oklch(0.40 0.10 170 / 0.08)",
+      }}
+    >
+      <div className="relative h-[420px] sm:h-[480px] w-full overflow-hidden">
+        <SkeletonBlock className="absolute inset-0 rounded-none" />
+        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 space-y-3">
+          <SkeletonBlock className="w-16 h-5 !rounded-full" />
+          <SkeletonBlock className="w-3/4 h-8" />
+          <SkeletonBlock className="w-full h-4" />
+          <SkeletonBlock className="w-24 h-3" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonArticleCard() {
+  return (
+    <div
+      className="flex flex-col overflow-hidden rounded-xl"
+      style={{
+        background: "oklch(0.97 0.02 170)",
+        border: "1px solid oklch(0.88 0.04 170)",
+        boxShadow: "0 2px 12px oklch(0.40 0.10 170 / 0.05)",
+      }}
+    >
+      <SkeletonBlock className="h-48 w-full rounded-none" />
+      <div className="flex flex-col flex-1 p-5 space-y-2">
+        <SkeletonBlock className="w-16 h-4 !rounded-full" />
+        <SkeletonBlock className="w-3/4 h-5" />
+        <SkeletonBlock className="w-full h-4" />
+        <div className="flex-1" />
+        <SkeletonBlock className="w-20 h-3" />
+      </div>
+    </div>
+  );
+}
+
+function SkeletonArticleGrid() {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <SkeletonArticleCard key={i} />
+      ))}
+    </div>
+  );
+}
+
+const PAGE_SIZE = 7;
+
+interface CategoryCache {
+  articles: StrapiArticle[];
+  extraArticles: StrapiArticle[];
+  currentPage: number;
+  pageCount: number;
+}
+
+export default function BlogPage() {
+  const [categories, setCategories] = useState<StrapiCategory[]>([]);
+  const [featuredArticle, setFeaturedArticle] = useState<StrapiArticle | null>(null);
+  
   const [activeCategorySlug, setActiveCategorySlug] = useState<string | null>(null);
-  const [extraArticles, setExtraArticles] = useState<StrapiArticle[]>([]);
-  const [currentPage, setCurrentPage] = useState(pagination.page);
-  const [pageCount, setPageCount] = useState(pagination.pageCount);
+  const [cache, setCache] = useState<Record<string, CategoryCache>>({});
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isCategoryLoading, setIsCategoryLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  function handleCategoryChange(slug: string | null) {
+  const cacheKey = activeCategorySlug ?? "__all__";
+  const entry = cache[cacheKey];
+
+  useEffect(() => {
+    async function fetchInitialData() {
+      try {
+        const [articlesRes, categoriesRes] = await Promise.all([
+          fetch(`/api/blog/articles?page=1&pageSize=${PAGE_SIZE}`).then(res => res.json()),
+          fetch('/api/blog/categories').then(res => res.json())
+        ]);
+
+        const { data: articlesData, meta } = articlesRes;
+        
+        setCategories(categoriesRes.data || []);
+        setFeaturedArticle(articlesData[0] ?? null);
+        
+        if (meta?.pagination) {
+          setCache((prev) => ({
+            ...prev,
+            __all__: {
+              articles: articlesData.slice(1) || [],
+              extraArticles: [],
+              currentPage: meta.pagination.page,
+              pageCount: meta.pagination.pageCount,
+            },
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch initial blog data", err);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    }
+    fetchInitialData();
+  }, []);
+
+  async function handleCategoryChange(slug: string | null) {
     setActiveCategorySlug(slug);
-    setExtraArticles([]);
-    setCurrentPage(1);
-    setPageCount(pagination.pageCount);
+    const key = slug ?? "__all__";
+    if (cache[key]) return;
+
+    setIsCategoryLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", "1");
+      params.set("pageSize", String(PAGE_SIZE));
+      if (slug) params.set("categorySlug", slug);
+
+      const res = await fetch(`/api/blog/articles?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+
+      setCache((prev) => ({
+        ...prev,
+        [key]: {
+          articles: data.data || [],
+          extraArticles: [],
+          currentPage: data.meta.pagination.page,
+          pageCount: data.meta.pagination.pageCount,
+        },
+      }));
+    } catch {
+    } finally {
+      setIsCategoryLoading(false);
+    }
   }
 
-  const baseArticles = activeCategorySlug === null
-    ? articles
-    : articles.filter((a) => a.category?.slug === activeCategorySlug);
+  const filteredArticles = [...(entry?.articles ?? []), ...(entry?.extraArticles ?? [])];
 
-  const filteredArticles = [...baseArticles, ...extraArticles];
-
-  const hasMore = currentPage < pageCount;
+  const hasMore = entry ? entry.currentPage < entry.pageCount : false;
 
   async function handleLoadMore() {
+    if (!entry) return;
     setIsLoadingMore(true);
     try {
-      const nextPage = currentPage + 1;
+      const nextPage = entry.currentPage + 1;
       const params = new URLSearchParams();
       params.set("page", String(nextPage));
       params.set("pageSize", String(PAGE_SIZE));
@@ -232,9 +372,16 @@ export default function BlogPage({ featuredArticle, articles, categories, pagina
       const res = await fetch(`/api/blog/articles?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
-      setExtraArticles((prev) => [...prev, ...data.data]);
-      setCurrentPage(data.meta.pagination.page);
-      setPageCount(data.meta.pagination.pageCount);
+
+      setCache((prev) => ({
+        ...prev,
+        [cacheKey]: {
+          ...prev[cacheKey],
+          extraArticles: [...(prev[cacheKey]?.extraArticles ?? []), ...data.data],
+          currentPage: data.meta.pagination.page,
+          pageCount: data.meta.pagination.pageCount,
+        },
+      }));
     } catch {
     } finally {
       setIsLoadingMore(false);
@@ -254,6 +401,7 @@ export default function BlogPage({ featuredArticle, articles, categories, pagina
           property="og:description"
           content="Insights, guides, and updates from the Lotus team on AI-powered social media content creation."
         />
+        <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style>
       </Head>
 
       <div
@@ -272,54 +420,69 @@ export default function BlogPage({ featuredArticle, articles, categories, pagina
             </p>
           </div>
 
-          {featuredArticle && (
-            <section className="mb-12" aria-label="Featured article">
-              <FeaturedHeroCard article={featuredArticle} />
-            </section>
-          )}
-
-          {categories.length > 0 && (
-            <CategoryFilter
-              categories={categories}
-              activeSlug={activeCategorySlug}
-              onChange={handleCategoryChange}
-            />
-          )}
-
-          {filteredArticles.length > 0 && (
-            <section aria-label="More articles">
-              <h2 className="font-heading text-2xl text-gray-900 mb-6">
-                More articles
-              </h2>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredArticles.map((article) => (
-                  <ArticleCard key={article.documentId} article={article} />
-                ))}
-              </div>
-
-              {hasMore && (
-                <div className="mt-10 flex justify-center">
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={isLoadingMore}
-                    className="px-8 py-3 rounded-full text-sm font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{
-                      background: "oklch(0.97 0.02 170)",
-                      color: "oklch(0.35 0.06 170)",
-                      border: "1px solid oklch(0.88 0.04 170)",
-                    }}
-                  >
-                    {isLoadingMore ? "Loading…" : "Load more"}
-                  </button>
-                </div>
+          {isInitialLoading ? (
+            <>
+              <section className="mb-12">
+                <SkeletonFeaturedHeroCard />
+              </section>
+              <SkeletonCategoryTabs />
+              <SkeletonArticleGrid />
+            </>
+          ) : (
+            <>
+              {featuredArticle && (
+                <section className="mb-12" aria-label="Featured article">
+                  <FeaturedHeroCard article={featuredArticle} />
+                </section>
               )}
-            </section>
-          )}
 
-          {!featuredArticle && filteredArticles.length === 0 && (
-            <div className="text-center py-24">
-              <p className="text-gray-400 text-lg">No articles yet. Check back soon!</p>
-            </div>
+              {categories.length > 0 && (
+                <CategoryFilter
+                  categories={categories}
+                  activeSlug={activeCategorySlug}
+                  onChange={handleCategoryChange}
+                />
+              )}
+
+              {isCategoryLoading ? (
+                <SkeletonArticleGrid />
+              ) : (
+                <>
+                  {filteredArticles.length > 0 && (
+                    <section aria-label="Articles">
+                      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredArticles.map((article) => (
+                          <ArticleCard key={article.documentId} article={article} />
+                        ))}
+                      </div>
+
+                      {hasMore && (
+                        <div className="mt-10 flex justify-center">
+                          <button
+                            onClick={handleLoadMore}
+                            disabled={isLoadingMore}
+                            className="px-8 py-3 rounded-full text-sm font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                            style={{
+                              background: "oklch(0.97 0.02 170)",
+                              color: "oklch(0.35 0.06 170)",
+                              border: "1px solid oklch(0.88 0.04 170)",
+                            }}
+                          >
+                            {isLoadingMore ? "Loading…" : "Load more"}
+                          </button>
+                        </div>
+                      )}
+                    </section>
+                  )}
+
+                  {filteredArticles.length === 0 && (
+                    <div className="text-center py-24">
+                      <p className="text-gray-400 text-lg">No articles yet. Check back soon!</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
           )}
         </main>
 
@@ -328,37 +491,3 @@ export default function BlogPage({ featuredArticle, articles, categories, pagina
     </>
   );
 }
-
-export const getStaticProps: GetStaticProps<BlogPageProps> = async () => {
-  try {
-    const [{ data, meta }, { data: categoriesData }] = await Promise.all([
-      getArticles({ page: 1, pageSize: 6 }),
-      getCategories(),
-    ]);
-
-    const { pagination } = meta;
-    const featuredArticle = data[0] ?? null;
-    const articles = data.slice(1);
-
-    return {
-      props: {
-        featuredArticle,
-        articles,
-        categories: categoriesData,
-        pagination,
-      },
-      revalidate: 60,
-    };
-  } catch (err) {
-    console.error("[blog] getStaticProps failed:", err);
-    return {
-      props: {
-        featuredArticle: null,
-        articles: [],
-        categories: [],
-        pagination: { page: 1, pageSize: 6, pageCount: 1, total: 0 },
-      },
-      revalidate: 60,
-    };
-  }
-};

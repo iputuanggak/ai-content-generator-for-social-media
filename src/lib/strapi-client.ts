@@ -187,7 +187,7 @@ function authHeaders(token: string): Record<string, string> {
  */
 export async function getArticles({
   page = 1,
-  pageSize = 9,
+  pageSize = 7,
   categorySlug,
   fetchFn = fetch,
 }: GetArticlesParams = {}): Promise<GetArticlesResponse> {
