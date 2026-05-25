@@ -49,6 +49,7 @@ describe("sanitizeSlug", () => {
     expect(sanitizeSlug("teams")).toBe("teams-team");
     expect(sanitizeSlug("admin")).toBe("admin-team");
     expect(sanitizeSlug("www")).toBe("www-team");
+    expect(sanitizeSlug("create-team")).toBe("create-team-team");
   });
 
   it("appends numeric suffix when sanitized denylisted slug collides", () => {
@@ -87,13 +88,14 @@ describe("SLUG_DENYLIST", () => {
       "teams",
       "admin",
       "www",
+      "create-team",
     ];
     for (const word of required) {
       expect(SLUG_DENYLIST.has(word)).toBe(true);
     }
   });
 
-  it("has exactly 8 entries", () => {
-    expect(SLUG_DENYLIST.size).toBe(8);
+  it("has exactly 9 entries", () => {
+    expect(SLUG_DENYLIST.size).toBe(9);
   });
 });

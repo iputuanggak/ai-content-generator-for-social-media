@@ -18,6 +18,7 @@ const EXCLUDED_PREFIXES = [
   "/onboarding",
   "/accept-invitation",
   "/teams",
+  "/create-team",
   "/favicon.ico",
 ];
 
@@ -30,6 +31,7 @@ const SLUG_DENYLIST = new Set([
   "teams",
   "admin",
   "www",
+  "create-team",
 ]);
 
 interface ResolveResult {
@@ -167,6 +169,7 @@ describe("proxy auth gate", () => {
       "/onboarding",
       "/accept-invitation",
       "/teams",
+      "/create-team",
       "/favicon.ico",
       "/",
     ])("passes through %s without auth check", async (pathname) => {

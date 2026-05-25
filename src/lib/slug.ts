@@ -7,6 +7,7 @@ export const SLUG_DENYLIST = new Set([
   "teams",
   "admin",
   "www",
+  "create-team",
 ]);
 
 export function generateSlug(name: string): string {
