@@ -1,11 +1,3 @@
-/**
- * BlocksRenderer — maps Strapi v5 Blocks JSON to styled React components.
- *
- * Supported block types: paragraph, heading (1-6), list (ordered/unordered),
- * quote, image, code.
- * Inline formatting: bold, italic, underline, strikethrough, code, links.
- */
-
 import React from "react";
 import Image from "next/image";
 import {
@@ -14,8 +6,6 @@ import {
   StrapiTextNode,
   StrapiLinkNode,
 } from "@/lib/strapi-client";
-
-// ─── Inline Renderer ──────────────────────────────────────────────────────────
 
 function renderTextNode(node: StrapiTextNode, key: number): React.ReactNode {
   let content: React.ReactNode = node.text;
@@ -26,8 +16,8 @@ function renderTextNode(node: StrapiTextNode, key: number): React.ReactNode {
         key={key}
         className="rounded px-1 py-0.5 text-sm font-mono"
         style={{
-          background: "oklch(0.20 0.04 170)",
-          color: "oklch(0.75 0.14 170)",
+          background: "oklch(0.94 0.03 170)",
+          color: "oklch(0.35 0.12 170)",
         }}
       >
         {content}
@@ -50,7 +40,7 @@ function renderLinkNode(node: StrapiLinkNode, key: number): React.ReactNode {
       href={node.url}
       target={node.url.startsWith("http") ? "_blank" : undefined}
       rel={node.url.startsWith("http") ? "noopener noreferrer" : undefined}
-      style={{ color: "oklch(0.65 0.14 170)" }}
+      style={{ color: "oklch(0.45 0.14 170)" }}
       className="underline underline-offset-2 hover:opacity-80 transition-opacity"
     >
       {node.children.map((child, i) => renderTextNode(child, i))}
@@ -65,15 +55,13 @@ export function renderInlineNodes(nodes: StrapiInlineNode[]): React.ReactNode {
   });
 }
 
-// ─── Block Renderers ──────────────────────────────────────────────────────────
-
 function ParagraphBlock({
   block,
 }: {
   block: Extract<StrapiBlock, { type: "paragraph" }>;
 }) {
   return (
-    <p className="text-white/80 leading-relaxed mb-6">
+    <p className="text-gray-700 leading-relaxed mb-6">
       {renderInlineNodes(block.children)}
     </p>
   );
@@ -82,12 +70,12 @@ function ParagraphBlock({
 type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
 const headingClasses: Record<number, string> = {
-  1: "font-heading text-4xl text-white mt-10 mb-4",
-  2: "font-heading text-3xl text-white mt-8 mb-4",
-  3: "font-heading text-2xl text-white mt-6 mb-3",
-  4: "font-heading text-xl text-white mt-6 mb-3",
-  5: "font-heading text-lg text-white mt-4 mb-2",
-  6: "font-heading text-base text-white mt-4 mb-2",
+  1: "font-heading text-4xl text-gray-900 mt-10 mb-4",
+  2: "font-heading text-3xl text-gray-900 mt-8 mb-4",
+  3: "font-heading text-2xl text-gray-900 mt-6 mb-3",
+  4: "font-heading text-xl text-gray-900 mt-6 mb-3",
+  5: "font-heading text-lg text-gray-900 mt-4 mb-2",
+  6: "font-heading text-base text-gray-900 mt-4 mb-2",
 };
 
 function HeadingBlock({
@@ -111,7 +99,7 @@ function ListBlock({
   const Tag = block.format === "ordered" ? "ol" : "ul";
   return (
     <Tag
-      className={`mb-6 pl-6 text-white/80 leading-relaxed space-y-1 ${
+      className={`mb-6 pl-6 text-gray-700 leading-relaxed space-y-1 ${
         block.format === "ordered" ? "list-decimal" : "list-disc"
       }`}
     >
@@ -129,7 +117,7 @@ function QuoteBlock({
 }) {
   return (
     <blockquote
-      className="my-6 pl-5 py-2 text-white/70 italic text-lg leading-relaxed"
+      className="my-6 pl-5 py-2 text-gray-600 italic text-lg leading-relaxed"
       style={{
         borderLeft: "3px solid oklch(0.55 0.14 170)",
       }}
@@ -149,9 +137,9 @@ function CodeBlock({
     <pre
       className="rounded-xl p-5 mb-6 overflow-x-auto text-sm font-mono leading-relaxed"
       style={{
-        background: "oklch(0.16 0.04 170)",
+        background: "oklch(0.14 0.04 170)",
         border: "1px solid oklch(0.26 0.06 170)",
-        color: "oklch(0.80 0.08 170)",
+        color: "oklch(0.85 0.06 170)",
       }}
     >
       <code>{code}</code>
@@ -194,8 +182,6 @@ function ImageBlock({
     </figure>
   );
 }
-
-// ─── Main Renderer ────────────────────────────────────────────────────────────
 
 interface BlocksRendererProps {
   blocks: StrapiBlock[];

@@ -1,5 +1,4 @@
 import Head from "next/head";
-import Image from "next/image";
 import { GetStaticPaths, GetStaticProps } from "next";
 import { format } from "date-fns";
 import { LandingNav } from "@/components/landing-nav";
@@ -29,9 +28,9 @@ function CategoryBadge({ name }: { name: string }) {
     <span
       className="inline-block rounded-full px-3 py-0.5 text-xs font-semibold tracking-wide uppercase"
       style={{
-        background: "oklch(0.90 0.08 170 / 0.15)",
-        color: "oklch(0.55 0.14 170)",
-        border: "1px solid oklch(0.55 0.14 170 / 0.25)",
+        background: "oklch(0.94 0.06 170 / 0.5)",
+        color: "oklch(0.40 0.12 170)",
+        border: "1px solid oklch(0.55 0.14 170 / 0.2)",
       }}
     >
       {name}
@@ -40,10 +39,10 @@ function CategoryBadge({ name }: { name: string }) {
 }
 
 export default function BlogDetailPage({ article }: BlogDetailPageProps) {
-  const coverSrc = article.cover?.url
-    ? article.cover.url.startsWith("http")
-      ? article.cover.url
-      : `${process.env.NEXT_PUBLIC_STRAPI_URL ?? ""}${article.cover.url}`
+  const coverSrc = article.coverImage?.url
+    ? article.coverImage.url.startsWith("http")
+      ? article.coverImage.url
+      : `${process.env.NEXT_PUBLIC_STRAPI_URL ?? ""}${article.coverImage.url}`
     : null;
 
   const metaTitle = `${article.title} — Lotus`;
@@ -62,25 +61,22 @@ export default function BlogDetailPage({ article }: BlogDetailPageProps) {
 
       <div
         className="min-h-screen"
-        style={{ background: "oklch(0.12 0.04 170)" }}
+        style={{ background: "oklch(0.99 0.005 170)" }}
       >
         <LandingNav />
 
-        {/* Full-width cover image */}
         {coverSrc ? (
           <div className="relative w-full h-[420px] sm:h-[560px] overflow-hidden">
-            <Image
+            <img
               src={coverSrc}
-              alt={article.cover?.alternativeText ?? article.title}
-              fill
-              className="object-cover"
-              priority
+              alt={article.coverImage?.alternativeText ?? article.title}
+              className="object-cover w-full h-full"
             />
             <div
               className="absolute inset-0"
               style={{
                 background:
-                  "linear-gradient(to bottom, transparent 40%, oklch(0.12 0.04 170) 100%)",
+                  "linear-gradient(to bottom, transparent 40%, oklch(0.99 0.005 170) 100%)",
               }}
             />
           </div>
@@ -89,13 +85,12 @@ export default function BlogDetailPage({ article }: BlogDetailPageProps) {
             className="w-full h-64 sm:h-80"
             style={{
               background:
-                "linear-gradient(135deg, oklch(0.18 0.06 170) 0%, oklch(0.15 0.08 175) 100%)",
+                "linear-gradient(135deg, oklch(0.95 0.03 170) 0%, oklch(0.92 0.04 175) 100%)",
             }}
           />
         )}
 
         <main className="mx-auto max-w-[720px] px-6 py-12">
-          {/* Category + date */}
           <div className="flex flex-wrap items-center gap-3 mb-4">
             {article.category && (
               <CategoryBadge name={article.category.name} />
@@ -103,23 +98,20 @@ export default function BlogDetailPage({ article }: BlogDetailPageProps) {
             <time
               dateTime={article.publishedAt}
               className="text-sm"
-              style={{ color: "oklch(0.55 0.06 170)" }}
+              style={{ color: "oklch(0.45 0.06 170)" }}
             >
               {formatDate(article.publishedAt)}
             </time>
           </div>
 
-          {/* Title */}
-          <h1 className="font-heading text-4xl sm:text-5xl text-white leading-tight mb-10">
+          <h1 className="font-heading text-4xl sm:text-5xl text-gray-900 leading-tight mb-10">
             {article.title}
           </h1>
 
-          {/* Body */}
-          {article.blocks && article.blocks.length > 0 && (
-            <BlocksRenderer blocks={article.blocks} />
+          {article.content && article.content.length > 0 && (
+            <BlocksRenderer blocks={article.content} />
           )}
 
-          {/* CTA */}
           <div className="mt-16">
             <BlogCta />
           </div>
@@ -164,7 +156,6 @@ export const getStaticProps: GetStaticProps<BlogDetailPageProps> = async ({
       return { notFound: true };
     }
 
-    // Strapi unavailable — return not found rather than crashing
     return { notFound: true };
   }
 };

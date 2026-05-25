@@ -19,6 +19,7 @@ const EXCLUDED_PREFIXES = [
   "/onboarding",
   "/accept-invitation",
   "/teams",
+  "/blog",
   "/favicon.ico",
 ];
 

@@ -92,12 +92,12 @@ export interface StrapiArticle {
   slug: string;
   excerpt: string | null;
   publishedAt: string;
-  cover: {
+  coverImage: {
     url: string;
     alternativeText: string | null;
   } | null;
   category: StrapiCategory | null;
-  blocks?: StrapiBlock[];
+  content?: StrapiBlock[];
 }
 
 export interface StrapiPagination {
@@ -197,9 +197,11 @@ export async function getArticles({
   const params = new URLSearchParams();
   params.set("pagination[page]", String(page));
   params.set("pagination[pageSize]", String(pageSize));
-  params.set("populate[cover]", "true");
-  params.set("populate[category]", "true");
   params.set("sort", "publishedAt:desc");
+  params.set("populate[coverImage][fields][0]", "url");
+  params.set("populate[coverImage][fields][1]", "alternativeText");
+  params.set("populate[category][fields][0]", "name");
+  params.set("populate[category][fields][1]", "slug");
 
   if (categorySlug) {
     params.set("filters[category][slug][$eq]", categorySlug);
@@ -234,9 +236,10 @@ export async function getArticleBySlug({
 
   const params = new URLSearchParams();
   params.set("filters[slug][$eq]", slug);
-  params.set("populate[cover]", "true");
-  params.set("populate[category]", "true");
-  params.set("populate[blocks][populate][image]", "true");
+  params.set("populate[coverImage][fields][0]", "url");
+  params.set("populate[coverImage][fields][1]", "alternativeText");
+  params.set("populate[category][fields][0]", "name");
+  params.set("populate[category][fields][1]", "slug");
 
   const url = `${baseUrl}/api/articles?${params.toString()}`;
 

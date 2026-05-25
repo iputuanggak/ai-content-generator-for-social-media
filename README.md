@@ -4,7 +4,7 @@
 
 A fullstack SaaS application that generates platform-adapted social media content from a single prompt. Marketing teams enter a topic, select a tone, and Lotus produces tailored posts for 8 platforms simultaneously — each optimized for that platform's format, character limits, and audience conventions.
 
-**[Live Demo →](lotus.putuangga.com)**
+**[Live Demo →](https://lotus.putuangga.com/)**
 
 ![Lotus Dashboard](/public/images/ai%20content%20generator%20dashboard.avif) 
 
@@ -32,6 +32,15 @@ A fullstack SaaS application that generates platform-adapted social media conten
 - **Disposable email blocking** — prevents spam registrations with a domain blocklist
 - **Role-based access** — admin-only actions for settings, member management, and invitations
 
+### Blog (Strapi CMS)
+
+- **Headless CMS** — blog powered by Strapi v5 with Articles and Categories content types
+- **ISR with 60s revalidation** — statically generated listing and detail pages, revalidated incrementally
+- **Client-side pagination** — "Load more" via a Next.js API route that proxies to Strapi
+- **Rich text rendering** — full Blocks editor support (paragraphs, headings, lists, quotes, code, images, inline formatting, links)
+- **Public access** — blog pages are excluded from auth middleware
+- **Category filtering** — filter articles by category with tab navigation
+
 ### Product Pages
 
 - **Marketing landing page** — hero section, feature showcase, testimonials, FAQ, and CTA
@@ -47,6 +56,7 @@ A fullstack SaaS application that generates platform-adapted social media conten
 - **Custom OTP auth flow** — purpose-built email verification with attempt tracking, cooldown, and expiry
 - **Dependency injection for testability** — services accept `fetchFn` and `db` as parameters, enabling 55+ test files with mocked external dependencies
 - **Concurrent AI calls** — all active platforms generate in parallel via `Promise.all`, with results streamed as they resolve
+- **Strapi v5 headless CMS integration** — hand-rolled REST client with typed content models, ISR revalidation, and a custom Blocks renderer for rich content
 
 ---
 
@@ -56,6 +66,7 @@ A fullstack SaaS application that generates platform-adapted social media conten
 |---|---|
 | **Framework** | Next.js 16 (Pages Router), React 19, TypeScript |
 | **Styling** | Tailwind CSS v4, shadcn/ui (radix-nova), HugeIcons, Motion (Framer Motion) |
+| **CMS** | Strapi v5 (Headless CMS) — blog articles and categories |
 | **Auth** | Better Auth with organization plugin — custom OTP flow on top |
 | **Database** | Neon (serverless Postgres) |
 | **ORM** | Drizzle ORM (PostgreSQL) |
@@ -83,6 +94,14 @@ Teams can switch models from Brand Settings without any code changes.
 ## Getting Started
 
 See [SETUP-GUIDELINES.md](SETUP-GUIDELINES.md) for local development setup, environment variables, database migrations, and deployment instructions.
+
+### Blog Environment Variables
+
+| Variable | Description |
+|---|---|
+| `STRAPI_URL` | Base URL of the Strapi v5 instance (server-side). Default: `http://localhost:1337` |
+| `STRAPI_API_TOKEN` | Read-only API token for Strapi authentication (server-side) |
+| `NEXT_PUBLIC_STRAPI_URL` | Public URL for resolving cover image paths in the browser |
 
 ## License
 
