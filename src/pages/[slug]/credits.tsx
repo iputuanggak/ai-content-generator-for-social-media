@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
+import { useRouter } from "next/router";
+import type { NextRouter } from "next/router";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useTeam } from "@/lib/team-context";
 import { useCredits } from "@/lib/use-credits";
 import { ContentSkeleton } from "@/components/content-skeleton";
+import { PACKAGES } from "@/lib/packages";
+import { Button } from "@/components/ui/button";
 import {
   Pagination,
   PaginationContent,
@@ -13,6 +17,8 @@ import {
   PaginationNext,
 } from "@/components/ui/pagination";
 import { useRequireVerifiedEmail } from "@/lib/use-require-verified-email";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface Transaction {
   id: string;
@@ -57,13 +63,76 @@ export default function CreditsPage() {
   );
 }
 
+function TopUpCards({ slug, router }: { slug: string | null; router: NextRouter }) {
+  const [loadingSlug, setLoadingSlug] = useState<string | null>(null);
+
+  async function handleBuy(packageSlug: string) {
+    setLoadingSlug(packageSlug);
+    try {
+      const res = await fetch(`/api/${slug}/credits/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packageSlug }),
+      });
+      if (!res.ok) {
+        toast.error("Failed to start checkout");
+        return;
+      }
+      const { url } = (await res.json()) as { url: string };
+      router.push(url);
+    } catch {
+      toast.error("Failed to start checkout");
+    } finally {
+      setLoadingSlug(null);
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {PACKAGES.map((pkg) => (
+        <div
+          key={pkg.slug}
+          className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
+        >
+          <h3 className="text-lg font-semibold capitalize text-zinc-900">{pkg.slug}</h3>
+          <p className="mt-1 text-3xl font-bold text-zinc-900">{pkg.credits} credits</p>
+          <p className="mt-1 text-sm text-zinc-500">{pkg.perCreditLabel}</p>
+          <div className="mt-auto pt-6">
+            <p className="text-2xl font-semibold text-zinc-900">{pkg.priceLabel}</p>
+            <Button
+              className="mt-3 w-full"
+              onClick={() => handleBuy(pkg.slug)}
+              disabled={loadingSlug !== null}
+            >
+              {loadingSlug === pkg.slug ? "Redirecting..." : "Buy"}
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CreditsContent() {
   const { slug } = useTeam();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: creditsData } = useCredits();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (router.query.topup === "success") {
+      toast.success("Credits added!");
+      queryClient.invalidateQueries({ queryKey: ["credits", slug] });
+      router.replace(`/${slug}/credits`, undefined, { shallow: true });
+    } else if (router.query.topup === "cancelled") {
+      toast.info("Top-up cancelled.");
+      router.replace(`/${slug}/credits`, undefined, { shallow: true });
+    }
+  }, [router.query.topup, slug, queryClient, router]);
 
   const fetchTransactions = useCallback(async (pg: number) => {
     const res = await fetch(`/api/${slug}/credits/transactions?page=${pg}`);
@@ -123,6 +192,11 @@ function CreditsContent() {
           </div>
         </div>
       )}
+
+      <div className="mb-8">
+        <h2 className="mb-4 text-lg font-semibold text-zinc-900">Top Up Credits</h2>
+        <TopUpCards slug={slug} router={router} />
+      </div>
 
       <div>
         <h2 className="mb-4 text-lg font-semibold text-zinc-900">Transaction History</h2>

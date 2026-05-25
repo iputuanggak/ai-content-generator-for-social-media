@@ -167,6 +167,43 @@ export async function getTransactionHistory(
   };
 }
 
+export async function addTopUpCredits(
+  organizationId: string,
+  amount: number,
+  stripeSessionId: string,
+  memberId: string,
+  deps: CreditServiceDeps = {}
+): Promise<void> {
+  const dbClient = deps.dbClient ?? db;
+  const now = new Date();
+  const batchId = randomUUID();
+
+  const twelveMonthsMs = 365 * 24 * 60 * 60 * 1000;
+  const expiresAt = new Date(now.getTime() + twelveMonthsMs);
+
+  await dbClient.insert(creditBatch).values({
+    id: batchId,
+    organizationId,
+    initialAmount: amount,
+    remaining: amount,
+    type: "top_up",
+    stripeSessionId,
+    expiresAt,
+    createdAt: now,
+  });
+
+  await dbClient.insert(creditTransaction).values({
+    id: randomUUID(),
+    organizationId,
+    amount,
+    type: "top_up",
+    referenceId: stripeSessionId,
+    memberId,
+    batchId,
+    createdAt: now,
+  });
+}
+
 export async function getExpiringBatches(
   organizationId: string,
   withinDays: number,

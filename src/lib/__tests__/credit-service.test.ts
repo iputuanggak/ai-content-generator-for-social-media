@@ -4,6 +4,7 @@ import {
   checkSufficientCredits,
   grantStarterCredits,
   deductCredits,
+  addTopUpCredits,
   getTransactionHistory,
   getExpiringBatches,
   type CreditServiceDeps,
@@ -309,6 +310,53 @@ describe("Credit Service – getTransactionHistory", () => {
 
     expect(result.items).toHaveLength(0);
     expect(result.total).toBe(0);
+  });
+});
+
+describe("Credit Service – addTopUpCredits", () => {
+  it("creates a credit_batch and credit_transaction for top-up", async () => {
+    const dbClient = makeDbClient({});
+
+    await addTopUpCredits("org-1", 100, "cs_test_123", "member-1", { dbClient });
+
+    expect(dbClient._insertedRows).toHaveLength(2);
+
+    const batchInsert = dbClient._insertedRows[0];
+    expect(batchInsert.values).toMatchObject({
+      organizationId: "org-1",
+      initialAmount: 100,
+      remaining: 100,
+      type: "top_up",
+      stripeSessionId: "cs_test_123",
+    });
+
+    const txnInsert = dbClient._insertedRows[1];
+    expect(txnInsert.values).toMatchObject({
+      organizationId: "org-1",
+      amount: 100,
+      type: "top_up",
+      referenceId: "cs_test_123",
+      memberId: "member-1",
+      batchId: batchInsert.values.id,
+    });
+  });
+
+  it("sets expires_at to approximately 12 months from now", async () => {
+    const dbClient = makeDbClient({});
+    const before = new Date();
+
+    await addTopUpCredits("org-1", 500, "cs_test_456", "member-1", { dbClient });
+
+    const after = new Date();
+    const batchInsert = dbClient._insertedRows[0];
+    const expiresAt = batchInsert.values.expiresAt as Date;
+
+    const twelveMonths = 365 * 24 * 60 * 60 * 1000;
+    const minExpected = new Date(before.getTime() + twelveMonths);
+    const maxExpected = new Date(after.getTime() + twelveMonths);
+
+    expect(expiresAt.getTime()).toBeGreaterThanOrEqual(minExpected.getTime());
+    expect(expiresAt.getTime()).toBeLessThanOrEqual(maxExpected.getTime());
   });
 });
 
