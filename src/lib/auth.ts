@@ -4,6 +4,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { randomUUID } from "crypto";
+import { grantStarterCredits } from "@/lib/credit-service";
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -46,25 +47,27 @@ export const auth = betterAuth({
       },
       organizationHooks: {
         afterCreateOrganization: async ({ organization: org }) => {
-          // Automatically create BrandSettings with defaults when a Team is created
-          await db.insert(schema.brandSettings).values({
-            id: randomUUID(),
-            organizationId: org.id,
-            brandVoice: "",
-            defaultTone: "professional",
-            activePlatforms: [
-              "twitter",
-              "linkedin",
-              "instagram",
-              "facebook",
-              "tiktok",
-              "youtube",
-              "threads",
-              "pinterest",
-            ],
-            modelId: "google/gemini-2.5-flash",
-            updatedAt: new Date(),
-          });
+          await Promise.all([
+            db.insert(schema.brandSettings).values({
+              id: randomUUID(),
+              organizationId: org.id,
+              brandVoice: "",
+              defaultTone: "professional",
+              activePlatforms: [
+                "twitter",
+                "linkedin",
+                "instagram",
+                "facebook",
+                "tiktok",
+                "youtube",
+                "threads",
+                "pinterest",
+              ],
+              modelId: "google/gemini-2.5-flash",
+              updatedAt: new Date(),
+            }),
+            grantStarterCredits(org.id),
+          ]);
         },
       },
     }),

@@ -186,3 +186,44 @@ export const emailOtp = pgTable("email_otp", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull(),
 });
+
+// ─── Credit system tables ────────────────────────────────────────────────────
+
+export const creditBatchType = pgEnum("credit_batch_type", [
+  "starter",
+  "top_up",
+]);
+
+export const creditTransactionType = pgEnum("credit_transaction_type", [
+  "starter_grant",
+  "top_up",
+  "generation",
+  "regeneration",
+  "batch_expiry",
+]);
+
+export const creditBatch = pgTable("credit_batch", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  initialAmount: integer("initial_amount").notNull(),
+  remaining: integer("remaining").notNull(),
+  type: creditBatchType("type").notNull(),
+  stripeSessionId: text("stripe_session_id"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+});
+
+export const creditTransaction = pgTable("credit_transaction", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  type: creditTransactionType("type").notNull(),
+  referenceId: text("reference_id"),
+  memberId: text("member_id").references(() => member.id, { onDelete: "cascade" }),
+  batchId: text("batch_id").references(() => creditBatch.id),
+  createdAt: timestamp("created_at").notNull(),
+});

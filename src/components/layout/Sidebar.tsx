@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { authClient } from "@/lib/auth-client";
 import { useTeam } from "@/lib/team-context";
+import { useCredits } from "@/lib/use-credits";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,6 +28,7 @@ function buildNavLinks(slug: string | null) {
 export function Sidebar({ onNavigate }: SidebarProps) {
   const router = useRouter();
   const { userName, teamName, teamId, slug, teams } = useTeam();
+  const { data: creditsData } = useCredits();
   const navLinks = buildNavLinks(slug);
 
   async function handleLogout() {
@@ -107,6 +109,21 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           </Link>
         ))}
       </nav>
+
+      {slug && creditsData && (
+        <div className="mx-3 mb-3 rounded-lg border border-zinc-200 px-3 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-zinc-500">Credits</span>
+            <span className="text-sm font-semibold text-zinc-900">{creditsData.available}</span>
+          </div>
+          <Link
+            href={`/${slug}/credits`}
+            className="mt-1.5 block text-xs font-medium text-teal-600 hover:text-teal-700"
+          >
+            Top Up
+          </Link>
+        </div>
+      )}
 
       <div className="border-t border-zinc-100 px-5 py-4">
         <div className="mb-2 text-sm font-medium text-zinc-900 truncate">{userName}</div>
