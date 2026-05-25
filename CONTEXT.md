@@ -75,7 +75,7 @@ The act of purchasing additional credits for a Team. Processed via Stripe Checko
 25 free credits granted to a Team when it is created. Behave identically to purchased credits — subject to the same 12-month expiry and FIFO consumption rules.
 
 ### Credit Transaction
-An audit record of a single credit event: a top-up, a generation deduction, a regeneration deduction, or a batch expiry. Linked to a Credit Batch and optionally to a Generation or Platform Output.
+An immutable ledger entry recording a single credit event for a Team: a starter grant, a top-up, a generation deduction, a regeneration deduction, or a batch expiry. Each transaction stores the Team's balance before and after the event, providing a full running balance history. Deductions that span multiple Credit Batches (FIFO) are recorded as a single transaction row. Optionally linked to a Generation or Platform Output via `referenceId`.
 
 ### Credit Expiry
 Credits expire 12 months after the batch was created. Expired batches' remaining credits become unusable. The system highlights batches expiring within 30 days on the credit history page.

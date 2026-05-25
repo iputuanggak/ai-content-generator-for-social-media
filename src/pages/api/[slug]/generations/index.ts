@@ -106,6 +106,9 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
+  let capturedGenerationId: string | null = null;
+  const successfulOutputCount = { value: 0 };
+
   initSSE(res);
 
   try {
@@ -115,17 +118,22 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       topic: topic.trim(),
       tone,
       onPlatformOutput: async ({ platform, content, platformOutputId, generationId }) => {
+        capturedGenerationId = generationId;
+        successfulOutputCount.value++;
         sendSSEEvent(res, { platform, content, generationId, platformOutputId });
-        try {
-          await deductCredits(ctx.orgId, 1, "generation", platformOutputId, ctx.memberId);
-        } catch (err) {
-          console.error("Credit deduction failed for platform output", platformOutputId, err);
-        }
       },
     });
   } catch (err) {
     console.error("Generation error:", err);
     sendSSEEvent(res, { error: "Generation failed for one or more platforms" });
+  }
+
+  if (successfulOutputCount.value > 0 && capturedGenerationId) {
+    try {
+      await deductCredits(ctx.orgId, successfulOutputCount.value, "generation", capturedGenerationId, ctx.memberId);
+    } catch (err) {
+      console.error("Credit deduction failed for generation", capturedGenerationId, err);
+    }
   }
 
   closeSSE(res);

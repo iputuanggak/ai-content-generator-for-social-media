@@ -4,6 +4,11 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## Project conventions
+
+- **Do not run `npm run build`** — it is not needed as a verification step.
+- **Middleware is at `src/proxy.ts`**, not `middleware.ts` at the project root.
+
 ## Agent skills
 
 ### Issue tracker

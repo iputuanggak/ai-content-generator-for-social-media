@@ -37,7 +37,7 @@ async function handleCreateGeneration({
     memberId: string;
     topic: string;
     tone: string;
-    onPlatformOutput: (result: { platformOutputId: string }) => Promise<void>;
+    onPlatformOutput: (result: { platformOutputId: string; generationId: string }) => Promise<void>;
   }) => Promise<void>;
   deductCredits: (orgId: string, amount: number, type: string, refId: string, memberId: string) => Promise<void>;
 }): Promise<{ status: number; body: unknown }> {
@@ -60,15 +60,23 @@ async function handleCreateGeneration({
     return { status: 402, body: { error: "Insufficient credits", required: platformCount, available: creditCheck.available } };
   }
 
+  let capturedGenerationId: string | null = null;
+  let successfulOutputCount = 0;
+
   await generateContent({
     orgId: activeOrgId,
     memberId: "member-1",
     topic: topic.trim(),
     tone,
-    onPlatformOutput: async ({ platformOutputId }) => {
-      await deductCredits(activeOrgId, 1, "generation", platformOutputId, "member-1");
+    onPlatformOutput: async ({ platformOutputId, generationId }) => {
+      capturedGenerationId = generationId;
+      successfulOutputCount++;
     },
   });
+
+  if (successfulOutputCount > 0 && capturedGenerationId) {
+    await deductCredits(activeOrgId, successfulOutputCount, "generation", capturedGenerationId, "member-1");
+  }
 
   return { status: 200, body: { success: true } };
 }
@@ -117,7 +125,7 @@ describe("POST /api/generations credit integration", () => {
     expect(checkCalls[0].amount).toBe(2);
   });
 
-  it("deducts 1 credit per successful platform output", async () => {
+  it("deducts credits in a single call equal to the number of platform outputs", async () => {
     const deductionCalls: { amount: number; type: string; refId: string }[] = [];
 
     await handleCreateGeneration({
@@ -127,17 +135,16 @@ describe("POST /api/generations credit integration", () => {
       findBrandSettings: async () => ({ activePlatforms: ["twitter", "linkedin"] }),
       checkCredits: async () => ({ sufficient: true, available: 25, required: 2 }),
       generateContent: async ({ onPlatformOutput }) => {
-        await onPlatformOutput({ platformOutputId: "po-1" });
-        await onPlatformOutput({ platformOutputId: "po-2" });
+        await onPlatformOutput({ platformOutputId: "po-1", generationId: "gen-1" });
+        await onPlatformOutput({ platformOutputId: "po-2", generationId: "gen-1" });
       },
       deductCredits: async (_orgId, amount, type, refId) => {
         deductionCalls.push({ amount, type, refId });
       },
     });
 
-    expect(deductionCalls).toHaveLength(2);
-    expect(deductionCalls[0]).toEqual({ amount: 1, type: "generation", refId: "po-1" });
-    expect(deductionCalls[1]).toEqual({ amount: 1, type: "generation", refId: "po-2" });
+    expect(deductionCalls).toHaveLength(1);
+    expect(deductionCalls[0]).toEqual({ amount: 2, type: "generation", refId: "gen-1" });
   });
 
   it("only deducts for platform outputs that succeed", async () => {
@@ -150,17 +157,17 @@ describe("POST /api/generations credit integration", () => {
       findBrandSettings: async () => ({ activePlatforms: ["twitter", "linkedin", "instagram"] }),
       checkCredits: async () => ({ sufficient: true, available: 25, required: 3 }),
       generateContent: async ({ onPlatformOutput }) => {
-        await onPlatformOutput({ platformOutputId: "po-1" });
+        await onPlatformOutput({ platformOutputId: "po-1", generationId: "gen-1" });
         // po-2 fails (no callback)
-        await onPlatformOutput({ platformOutputId: "po-3" });
+        await onPlatformOutput({ platformOutputId: "po-3", generationId: "gen-1" });
       },
       deductCredits: async (_orgId, _amount, _type, refId) => {
         deductionCalls.push({ refId });
       },
     });
 
-    expect(deductionCalls).toHaveLength(2);
-    expect(deductionCalls.map((d) => d.refId)).toEqual(["po-1", "po-3"]);
+    expect(deductionCalls).toHaveLength(1);
+    expect(deductionCalls[0].refId).toBe("gen-1");
   });
 
   it("does not deduct when credit check fails", async () => {
