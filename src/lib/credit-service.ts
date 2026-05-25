@@ -104,6 +104,8 @@ export async function deductCredits(
     throw new Error(`Insufficient credits: need ${amount}, have ${totalAvailable}`);
   }
 
+  const balanceBefore = totalAvailable;
+
   let remaining = amount;
 
   for (const batch of batches) {
@@ -116,19 +118,21 @@ export async function deductCredits(
       .set({ remaining: batch.remaining! - deduction })
       .where(eq(creditBatch.id, batch.id));
 
-    await dbClient.insert(creditTransaction).values({
-      id: randomUUID(),
-      organizationId,
-      amount: -deduction,
-      type,
-      referenceId,
-      memberId,
-      batchId: batch.id,
-      createdAt: now,
-    });
-
     remaining -= deduction;
   }
+
+  await dbClient.insert(creditTransaction).values({
+    id: randomUUID(),
+    organizationId,
+    amount: -amount,
+    type,
+    referenceId,
+    memberId,
+    batchId: null,
+    balanceBefore,
+    balanceAfter: balanceBefore - amount,
+    createdAt: now,
+  });
 }
 
 export async function getTransactionHistory(

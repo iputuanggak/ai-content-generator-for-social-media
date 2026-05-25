@@ -154,7 +154,7 @@ describe("Credit Service – grantStarterCredits", () => {
 });
 
 describe("Credit Service – deductCredits", () => {
-  it("deducts from a single batch with enough remaining", async () => {
+  it("deducts from a single batch, creates one transaction row with null batchId", async () => {
     const dbClient = makeDbClient({
       batchRows: [{ id: "b1", remaining: 10 }],
     });
@@ -172,11 +172,11 @@ describe("Credit Service – deductCredits", () => {
       type: "generation",
       referenceId: "po-1",
       memberId: "member-1",
-      batchId: "b1",
+      batchId: null,
     });
   });
 
-  it("spans multiple batches when single batch is insufficient", async () => {
+  it("spans multiple batches but creates only one transaction row", async () => {
     const dbClient = makeDbClient({
       batchRows: [
         { id: "b1", remaining: 2 },
@@ -190,14 +190,13 @@ describe("Credit Service – deductCredits", () => {
     expect(dbClient._updatedRows[0].values).toMatchObject({ remaining: 0 });
     expect(dbClient._updatedRows[1].values).toMatchObject({ remaining: 3 });
 
-    expect(dbClient._insertedRows).toHaveLength(2);
+    expect(dbClient._insertedRows).toHaveLength(1);
     expect(dbClient._insertedRows[0].values).toMatchObject({
-      amount: -2,
-      batchId: "b1",
-    });
-    expect(dbClient._insertedRows[1].values).toMatchObject({
-      amount: -2,
-      batchId: "b2",
+      amount: -4,
+      batchId: null,
+      type: "generation",
+      referenceId: "po-1",
+      memberId: "member-1",
     });
   });
 
@@ -255,6 +254,40 @@ describe("Credit Service – deductCredits", () => {
     expect(dbClient._updatedRows[0].values.remaining).toBe(0);
     expect(dbClient._updatedRows[1].values.remaining).toBe(0);
     expect(dbClient._updatedRows[2].values.remaining).toBe(9);
+  });
+
+  it("writes balanceBefore and balanceAfter on single-batch deduction", async () => {
+    const dbClient = makeDbClient({
+      batchRows: [{ id: "b1", remaining: 10 }],
+    });
+
+    await deductCredits("org-1", 3, "generation", "po-1", "member-1", { dbClient });
+
+    expect(dbClient._insertedRows).toHaveLength(1);
+    expect(dbClient._insertedRows[0].values).toMatchObject({
+      balanceBefore: 10,
+      balanceAfter: 7,
+    });
+  });
+
+  it("writes balanceBefore and balanceAfter on multi-batch FIFO deduction", async () => {
+    const dbClient = makeDbClient({
+      batchRows: [
+        { id: "b1", remaining: 2 },
+        { id: "b2", remaining: 5 },
+        { id: "b3", remaining: 10 },
+      ],
+    });
+
+    await deductCredits("org-1", 7, "generation", "po-1", "member-1", { dbClient });
+
+    expect(dbClient._insertedRows).toHaveLength(1);
+    expect(dbClient._insertedRows[0].values).toMatchObject({
+      amount: -7,
+      balanceBefore: 17,
+      balanceAfter: 10,
+      batchId: null,
+    });
   });
 });
 
