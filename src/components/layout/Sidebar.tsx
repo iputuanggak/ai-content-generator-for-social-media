@@ -120,7 +120,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             href={`/${slug}/credits`}
             className="mt-1.5 block text-xs font-medium text-teal-600 hover:text-teal-700"
           >
-            Top Up
+            Manage
           </Link>
         </div>
       )}
