@@ -69,7 +69,6 @@ export async function grantStarterCredits(
     type: "starter_grant",
     referenceId: null,
     memberId: null,
-    batchId,
     balanceBefore: 0,
     balanceAfter: 25,
     createdAt: now,
@@ -128,7 +127,6 @@ export async function deductCredits(
     type,
     referenceId,
     memberId,
-    batchId: null,
     balanceBefore,
     balanceAfter: balanceBefore - amount,
     createdAt: now,
@@ -140,7 +138,7 @@ export async function getTransactionHistory(
   page: number,
   pageSize: number,
   deps: CreditServiceDeps = {}
-): Promise<{ items: { id: string; amount: number; type: string; referenceId: string | null; batchId: string | null; balanceBefore: number | null; balanceAfter: number | null; createdAt: Date }[]; total: number; page: number; pageSize: number }> {
+): Promise<{ items: { id: string; amount: number; type: string; referenceId: string | null; balanceBefore: number | null; balanceAfter: number | null; createdAt: Date }[]; total: number; page: number; pageSize: number }> {
   const dbClient = deps.dbClient ?? db;
 
   const countResult = await dbClient
@@ -156,7 +154,6 @@ export async function getTransactionHistory(
       amount: creditTransaction.amount,
       type: creditTransaction.type,
       referenceId: creditTransaction.referenceId,
-      batchId: creditTransaction.batchId,
       balanceBefore: creditTransaction.balanceBefore,
       balanceAfter: creditTransaction.balanceAfter,
       createdAt: creditTransaction.createdAt,
@@ -173,7 +170,6 @@ export async function getTransactionHistory(
       amount: r.amount,
       type: r.type,
       referenceId: r.referenceId,
-      batchId: r.batchId,
       balanceBefore: r.balanceBefore,
       balanceAfter: r.balanceAfter,
       createdAt: r.createdAt,
@@ -218,11 +214,53 @@ export async function addTopUpCredits(
     type: "top_up",
     referenceId: stripeSessionId,
     memberId,
-    batchId,
     balanceBefore: currentBalance,
     balanceAfter: currentBalance + amount,
     createdAt: now,
   });
+}
+
+export function computeRunningBalance(
+  rows: { id: string; amount: number }[]
+): { id: string; balanceBefore: number; balanceAfter: number }[] {
+  let running = 0;
+  return rows.map((row) => {
+    const balanceBefore = running;
+    const balanceAfter = running + row.amount;
+    running = balanceAfter;
+    return { id: row.id, balanceBefore, balanceAfter };
+  });
+}
+
+export async function backfillRunningBalances(
+  deps: CreditServiceDeps = {}
+): Promise<void> {
+  const dbClient = deps.dbClient ?? db;
+
+  const orgs = await dbClient
+    .select({ id: creditTransaction.organizationId })
+    .from(creditTransaction)
+    .groupBy(creditTransaction.organizationId);
+
+  for (const org of orgs) {
+    const rows = await dbClient
+      .select({
+        id: creditTransaction.id,
+        amount: creditTransaction.amount,
+      })
+      .from(creditTransaction)
+      .where(eq(creditTransaction.organizationId, org.id))
+      .orderBy(asc(creditTransaction.createdAt));
+
+    const updates = computeRunningBalance(rows);
+
+    for (const u of updates) {
+      await dbClient
+        .update(creditTransaction)
+        .set({ balanceBefore: u.balanceBefore, balanceAfter: u.balanceAfter })
+        .where(eq(creditTransaction.id, u.id));
+    }
+  }
 }
 
 export async function getExpiringBatches(

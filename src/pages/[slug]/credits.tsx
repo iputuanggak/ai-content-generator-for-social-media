@@ -25,7 +25,6 @@ interface Transaction {
   amount: number;
   type: string;
   referenceId: string | null;
-  batchId: string | null;
   balanceBefore: number | null;
   balanceAfter: number | null;
   createdAt: string;

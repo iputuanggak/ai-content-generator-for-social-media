@@ -224,8 +224,7 @@ export const creditTransaction = pgTable("credit_transaction", {
   type: creditTransactionType("type").notNull(),
   referenceId: text("reference_id"),
   memberId: text("member_id").references(() => member.id, { onDelete: "cascade" }),
-  batchId: text("batch_id").references(() => creditBatch.id),
-  balanceBefore: integer("balance_before"),
-  balanceAfter: integer("balance_after"),
+  balanceBefore: integer("balance_before").notNull(),
+  balanceAfter: integer("balance_after").notNull(),
   createdAt: timestamp("created_at").notNull(),
 });
