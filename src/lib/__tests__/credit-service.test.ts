@@ -122,6 +122,18 @@ describe("Credit Service – grantStarterCredits", () => {
     });
   });
 
+  it("writes balanceBefore=0 and balanceAfter=25 on the transaction", async () => {
+    const dbClient = makeDbClient({});
+
+    await grantStarterCredits("org-1", { dbClient });
+
+    const txnInsert = dbClient._insertedRows[1];
+    expect(txnInsert.values).toMatchObject({
+      balanceBefore: 0,
+      balanceAfter: 25,
+    });
+  });
+
   it("sets expires_at to approximately 12 months from now", async () => {
     const dbClient = makeDbClient({});
     const before = new Date();
@@ -247,18 +259,30 @@ describe("Credit Service – deductCredits", () => {
 });
 
 function makeTransactionDbClient(transactionRows: object[], totalCount: number) {
+  let selectCallCount = 0;
+
   const mockDbClient = {
-    select: () => ({
-      from: (_table: unknown) => ({
-        where: (_condition: unknown) => ({
-          orderBy: (..._args: unknown[]) => ({
-            limit: (_n: unknown) => ({
-              offset: (_n: unknown) => Promise.resolve(transactionRows),
+    select: () => {
+      selectCallCount++;
+      if (selectCallCount === 1) {
+        return {
+          from: (_table: unknown) => ({
+            where: (_condition: unknown) => Promise.resolve([{ count: totalCount }]),
+          }),
+        };
+      }
+      return {
+        from: (_table: unknown) => ({
+          where: (_condition: unknown) => ({
+            orderBy: (..._args: unknown[]) => ({
+              limit: (_n: unknown) => ({
+                offset: (_n: unknown) => Promise.resolve(transactionRows),
+              }),
             }),
           }),
         }),
-      }),
-    }),
+      };
+    },
     _totalCount: totalCount,
   };
 
@@ -282,8 +306,8 @@ function makeExpiringBatchesDbClient(batchRows: object[]) {
 describe("Credit Service – getTransactionHistory", () => {
   it("returns paginated transaction results with correct shape", async () => {
     const rows = [
-      { id: "t1", amount: -1, type: "generation", referenceId: "po-1", batchId: "b1", createdAt: new Date("2025-01-02") },
-      { id: "t2", amount: 25, type: "starter_grant", referenceId: null, batchId: "b2", createdAt: new Date("2025-01-01") },
+      { id: "t1", amount: -1, type: "generation", referenceId: "po-1", batchId: "b1", balanceBefore: 25, balanceAfter: 24, createdAt: new Date("2025-01-02") },
+      { id: "t2", amount: 25, type: "starter_grant", referenceId: null, batchId: "b2", balanceBefore: 0, balanceAfter: 25, createdAt: new Date("2025-01-01") },
     ];
 
     const dbClient = makeTransactionDbClient(rows, 2);
@@ -297,6 +321,8 @@ describe("Credit Service – getTransactionHistory", () => {
       type: "generation",
       referenceId: "po-1",
       batchId: "b1",
+      balanceBefore: 25,
+      balanceAfter: 24,
     });
     expect(result.total).toBe(2);
     expect(result.page).toBe(1);
@@ -310,6 +336,49 @@ describe("Credit Service – getTransactionHistory", () => {
 
     expect(result.items).toHaveLength(0);
     expect(result.total).toBe(0);
+  });
+
+  it("returns correct total from count query, not page length", async () => {
+    const rows = [
+      { id: "t1", amount: 25, type: "starter_grant", referenceId: null, batchId: "b1", balanceBefore: 0, balanceAfter: 25, createdAt: new Date("2025-01-01") },
+    ];
+
+    const dbClient = makeTransactionDbClient(rows, 42);
+
+    const result = await getTransactionHistory("org-1", 1, 20, { dbClient });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.total).toBe(42);
+  });
+
+  it("includes balanceBefore and balanceAfter per item", async () => {
+    const rows = [
+      { id: "t1", amount: 100, type: "top_up", referenceId: "cs_1", batchId: "b1", balanceBefore: 25, balanceAfter: 125, createdAt: new Date("2025-01-03") },
+    ];
+
+    const dbClient = makeTransactionDbClient(rows, 1);
+
+    const result = await getTransactionHistory("org-1", 1, 20, { dbClient });
+
+    expect(result.items[0]).toMatchObject({
+      balanceBefore: 25,
+      balanceAfter: 125,
+    });
+  });
+
+  it("returns null balance fields when not set", async () => {
+    const rows = [
+      { id: "t1", amount: -1, type: "generation", referenceId: "po-1", batchId: "b1", balanceBefore: null, balanceAfter: null, createdAt: new Date("2025-01-01") },
+    ];
+
+    const dbClient = makeTransactionDbClient(rows, 1);
+
+    const result = await getTransactionHistory("org-1", 1, 20, { dbClient });
+
+    expect(result.items[0]).toMatchObject({
+      balanceBefore: null,
+      balanceAfter: null,
+    });
   });
 });
 
@@ -338,6 +407,32 @@ describe("Credit Service – addTopUpCredits", () => {
       referenceId: "cs_test_123",
       memberId: "member-1",
       batchId: batchInsert.values.id,
+    });
+  });
+
+  it("writes balanceBefore=current balance and balanceAfter=current balance + top-up amount", async () => {
+    const dbClient = makeDbClient({
+      batchRows: [{ id: "b1", remaining: 25 }],
+    });
+
+    await addTopUpCredits("org-1", 100, "cs_test_123", "member-1", { dbClient });
+
+    const txnInsert = dbClient._insertedRows[1];
+    expect(txnInsert.values).toMatchObject({
+      balanceBefore: 25,
+      balanceAfter: 125,
+    });
+  });
+
+  it("writes balanceBefore=0 when team has no existing credits", async () => {
+    const dbClient = makeDbClient({ batchRows: [] });
+
+    await addTopUpCredits("org-1", 100, "cs_test_123", "member-1", { dbClient });
+
+    const txnInsert = dbClient._insertedRows[1];
+    expect(txnInsert.values).toMatchObject({
+      balanceBefore: 0,
+      balanceAfter: 100,
     });
   });
 

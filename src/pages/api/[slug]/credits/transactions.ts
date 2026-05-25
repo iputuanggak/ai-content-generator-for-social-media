@@ -22,6 +22,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       type: item.type,
       referenceId: item.referenceId,
       batchId: item.batchId,
+      balanceBefore: item.balanceBefore,
+      balanceAfter: item.balanceAfter,
       createdAt: item.createdAt,
     })),
     total: result.total,

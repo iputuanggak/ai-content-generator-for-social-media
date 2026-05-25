@@ -26,6 +26,8 @@ interface Transaction {
   type: string;
   referenceId: string | null;
   batchId: string | null;
+  balanceBefore: number | null;
+  balanceAfter: number | null;
   createdAt: string;
 }
 
@@ -214,7 +216,9 @@ function CreditsContent() {
                 <thead>
                   <tr className="border-b border-zinc-100 bg-zinc-50/50">
                     <th className="px-4 py-3 text-left font-medium text-zinc-500">Type</th>
+                    <th className="px-4 py-3 text-right font-medium text-zinc-500">Balance Before</th>
                     <th className="px-4 py-3 text-right font-medium text-zinc-500">Amount</th>
+                    <th className="px-4 py-3 text-right font-medium text-zinc-500">Balance After</th>
                     <th className="px-4 py-3 text-left font-medium text-zinc-500">Date</th>
                   </tr>
                 </thead>
@@ -226,8 +230,14 @@ function CreditsContent() {
                         <td className="px-4 py-3 text-zinc-700">
                           {formatTypeLabel(txn.type)}
                         </td>
+                        <td className="px-4 py-3 text-right text-zinc-500">
+                          {txn.balanceBefore !== null && txn.balanceBefore !== undefined ? txn.balanceBefore : "—"}
+                        </td>
                         <td className={`px-4 py-3 text-right ${amount.className}`}>
                           {amount.text}
+                        </td>
+                        <td className="px-4 py-3 text-right text-zinc-500">
+                          {txn.balanceAfter !== null && txn.balanceAfter !== undefined ? txn.balanceAfter : "—"}
                         </td>
                         <td className="px-4 py-3 text-zinc-500">
                           {format(new Date(txn.createdAt), "MMM d, yyyy h:mm a")}

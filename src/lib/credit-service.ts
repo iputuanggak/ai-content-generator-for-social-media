@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { eq, and, gt, asc, desc, lte } from "drizzle-orm";
+import { eq, and, gt, asc, desc, lte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { creditBatch, creditTransaction } from "@/lib/db/schema";
 
@@ -70,6 +70,8 @@ export async function grantStarterCredits(
     referenceId: null,
     memberId: null,
     batchId,
+    balanceBefore: 0,
+    balanceAfter: 25,
     createdAt: now,
   });
 }
@@ -134,8 +136,15 @@ export async function getTransactionHistory(
   page: number,
   pageSize: number,
   deps: CreditServiceDeps = {}
-): Promise<{ items: { id: string; amount: number; type: string; referenceId: string | null; batchId: string | null; createdAt: Date }[]; total: number; page: number; pageSize: number }> {
+): Promise<{ items: { id: string; amount: number; type: string; referenceId: string | null; batchId: string | null; balanceBefore: number | null; balanceAfter: number | null; createdAt: Date }[]; total: number; page: number; pageSize: number }> {
   const dbClient = deps.dbClient ?? db;
+
+  const countResult = await dbClient
+    .select({ count: sql<number>`count(*)::int` })
+    .from(creditTransaction)
+    .where(eq(creditTransaction.organizationId, organizationId));
+
+  const total = countResult[0]?.count ?? 0;
 
   const rows = await dbClient
     .select({
@@ -144,6 +153,8 @@ export async function getTransactionHistory(
       type: creditTransaction.type,
       referenceId: creditTransaction.referenceId,
       batchId: creditTransaction.batchId,
+      balanceBefore: creditTransaction.balanceBefore,
+      balanceAfter: creditTransaction.balanceAfter,
       createdAt: creditTransaction.createdAt,
     })
     .from(creditTransaction)
@@ -159,9 +170,11 @@ export async function getTransactionHistory(
       type: r.type,
       referenceId: r.referenceId,
       batchId: r.batchId,
+      balanceBefore: r.balanceBefore,
+      balanceAfter: r.balanceAfter,
       createdAt: r.createdAt,
     })),
-    total: rows.length,
+    total,
     page,
     pageSize,
   };
@@ -180,6 +193,8 @@ export async function addTopUpCredits(
 
   const twelveMonthsMs = 365 * 24 * 60 * 60 * 1000;
   const expiresAt = new Date(now.getTime() + twelveMonthsMs);
+
+  const currentBalance = await getAvailableCredits(organizationId, deps);
 
   await dbClient.insert(creditBatch).values({
     id: batchId,
@@ -200,6 +215,8 @@ export async function addTopUpCredits(
     referenceId: stripeSessionId,
     memberId,
     batchId,
+    balanceBefore: currentBalance,
+    balanceAfter: currentBalance + amount,
     createdAt: now,
   });
 }
