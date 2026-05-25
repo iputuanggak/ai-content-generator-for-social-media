@@ -41,6 +41,24 @@ A fullstack SaaS application that generates platform-adapted social media conten
 - **Public access** — blog pages are excluded from auth middleware
 - **Category filtering** — filter articles by category with tab navigation
 
+### AI Credit System
+
+- **Pay-per-use credits** — 1 credit = 1 platform output (generating across 5 platforms costs 5 credits)
+- **25 free starter credits** — automatically granted when a team is created
+- **FIFO consumption** — oldest credits are used first across batches
+- **12-month expiry** — unused credits expire 12 months from the batch creation date
+- **Per-platform cost transparency** — the generation UI shows the exact credit cost before each run
+- **Low-credit warning** — a dismissible banner appears when the balance drops below 10 credits
+- **Transaction history** — full audit trail with balance-before/balance-after for every event (top-ups, generations, regenerations, batch expirations)
+
+### Billing & Payments (Stripe)
+
+- **One-time payments** via Stripe Checkout (not subscriptions) — users buy credit packages as needed
+- **Stripe Checkout Sessions** — server-side session creation with team metadata for reconciliation
+- **Webhook handling** — `checkout.session.completed` events processed with signature verification and idempotency checks
+- **Environment-mapped pricing** — Stripe Price IDs are configured via environment variables, allowing easy switching between test/live modes
+- **Success/cancel redirects** — users are redirected back to the Credits page with feedback toasts
+
 ### Product Pages
 
 - **Marketing landing page** — hero section, feature showcase, testimonials, FAQ, and CTA
@@ -57,6 +75,7 @@ A fullstack SaaS application that generates platform-adapted social media conten
 - **Dependency injection for testability** — services accept `fetchFn` and `db` as parameters, enabling 55+ test files with mocked external dependencies
 - **Concurrent AI calls** — all active platforms generate in parallel via `Promise.all`, with results streamed as they resolve
 - **Strapi v5 headless CMS integration** — hand-rolled REST client with typed content models, ISR revalidation, and a custom Blocks renderer for rich content
+- **Credit-based usage with Stripe billing** — per-platform credit deduction with FIFO batch consumption, 12-month expiry, running-balance audit ledger, and Stripe Checkout for one-time top-ups
 
 ---
 
@@ -72,6 +91,7 @@ A fullstack SaaS application that generates platform-adapted social media conten
 | **ORM** | Drizzle ORM (PostgreSQL) |
 | **AI Provider** | OpenRouter — Google Gemini, OpenAI GPT-4.1, Anthropic Claude (model configurable per team) |
 | **Email** | Resend + React Email (OTP codes, team invitations) |
+| **Payments** | Stripe (Checkout Sessions, Webhooks) |
 | **State Management** | TanStack Query v5 (known as React Query) with localStorage persistence |
 | **Notifications** | Sonner |
 | **Testing** | Vitest + Testing Library + jsdom |
@@ -91,6 +111,18 @@ Teams can switch models from Brand Settings without any code changes.
 
 ---
 
+## Credit Pricing
+
+| Package | Credits | Price | Per-Credit Cost |
+|---------|---------|-------|-----------------|
+| **Starter** | 100 | $5 | $0.050 |
+| **Growth** | 500 | $20 | $0.040 |
+| **Pro** | 2,000 | $60 | $0.030 |
+
+All teams start with 25 free credits. Credits expire 12 months from the batch creation date.
+
+---
+
 ## Getting Started
 
 See [SETUP-GUIDELINES.md](SETUP-GUIDELINES.md) for local development setup, environment variables, database migrations, and deployment instructions.
@@ -102,6 +134,16 @@ See [SETUP-GUIDELINES.md](SETUP-GUIDELINES.md) for local development setup, envi
 | `STRAPI_URL` | Base URL of the Strapi v5 instance (server-side). Default: `http://localhost:1337` |
 | `STRAPI_API_TOKEN` | Read-only API token for Strapi authentication (server-side) |
 | `NEXT_PUBLIC_STRAPI_URL` | Public URL for resolving cover image paths in the browser |
+
+### Stripe & Credit System Environment Variables
+
+| Variable | Description |
+|---|---|
+| `STRIPE_SECRET_KEY` | Stripe API secret key (server-side) |
+| `STRIPE_WEBHOOK_SECRET` | Webhook endpoint signing secret for signature verification |
+| `STRIPE_PRICE_STARTER` | Stripe Price ID for the Starter package (100 credits) |
+| `STRIPE_PRICE_GROWTH` | Stripe Price ID for the Growth package (500 credits) |
+| `STRIPE_PRICE_PRO` | Stripe Price ID for the Pro package (2,000 credits) |
 
 ## License
 
