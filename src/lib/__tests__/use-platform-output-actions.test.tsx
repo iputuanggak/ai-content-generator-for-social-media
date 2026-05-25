@@ -3,6 +3,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 import { usePlatformOutputActions } from "@/lib/use-platform-output-actions";
 
 // Mock sonner toast
@@ -18,7 +20,11 @@ import { toast } from "sonner";
 const toastMock = toast as unknown as ReturnType<typeof vi.fn> & { error: ReturnType<typeof vi.fn> };
 
 function makeHook(slug = "team-slug", generationId = "gen-1") {
-  return renderHook(() => usePlatformOutputActions(slug, generationId));
+  const queryClient = new QueryClient();
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  return renderHook(() => usePlatformOutputActions(slug, generationId), { wrapper });
 }
 
 function setupOutput(result: ReturnType<typeof makeHook>["result"], outputId = "out-1", content = "Hello world") {

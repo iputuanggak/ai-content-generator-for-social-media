@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, asc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { creditBatch, creditTransaction } from "@/lib/db/schema";
 
@@ -72,4 +72,59 @@ export async function grantStarterCredits(
     batchId,
     createdAt: now,
   });
+}
+
+export async function deductCredits(
+  organizationId: string,
+  amount: number,
+  type: "generation" | "regeneration",
+  referenceId: string,
+  memberId: string,
+  deps: CreditServiceDeps = {}
+): Promise<void> {
+  const dbClient = deps.dbClient ?? db;
+  const now = new Date();
+
+  const batches = await dbClient
+    .select()
+    .from(creditBatch)
+    .where(
+      and(
+        eq(creditBatch.organizationId, organizationId),
+        gt(creditBatch.remaining, 0),
+        gt(creditBatch.expiresAt, now)
+      )
+    )
+    .orderBy(asc(creditBatch.createdAt));
+
+  const totalAvailable = batches.reduce((sum, b) => sum + (b.remaining ?? 0), 0);
+  if (totalAvailable < amount) {
+    throw new Error(`Insufficient credits: need ${amount}, have ${totalAvailable}`);
+  }
+
+  let remaining = amount;
+
+  for (const batch of batches) {
+    if (remaining <= 0) break;
+
+    const deduction = Math.min(batch.remaining!, remaining);
+
+    await dbClient
+      .update(creditBatch)
+      .set({ remaining: batch.remaining! - deduction })
+      .where(eq(creditBatch.id, batch.id));
+
+    await dbClient.insert(creditTransaction).values({
+      id: randomUUID(),
+      organizationId,
+      amount: -deduction,
+      type,
+      referenceId,
+      memberId,
+      batchId: batch.id,
+      createdAt: now,
+    });
+
+    remaining -= deduction;
+  }
 }

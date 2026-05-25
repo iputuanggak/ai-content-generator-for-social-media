@@ -1,13 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { db } from "@/lib/db";
 import { eq, and, ilike, gte, lte, desc } from "drizzle-orm";
-import { generation } from "@/lib/db/schema";
+import { generation, brandSettings } from "@/lib/db/schema";
 import { withSlugSession } from "@/lib/with-session";
 import type { Tone } from "@/lib/content-adapter";
 import { TONE_OPTIONS } from "@/lib/content-adapter";
 import { generateContent } from "@/lib/generation-service";
 import { initSSE, sendSSEEvent, closeSSE } from "@/lib/sse";
 import { MAX_TOPIC_LENGTH, validateLength } from "@/lib/input-validation";
+import { checkSufficientCredits, deductCredits } from "@/lib/credit-service";
 
 export const config = {
   api: {
@@ -83,6 +84,28 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: "tone must be a valid value" });
   }
 
+  const settingsRows = await db
+    .select()
+    .from(brandSettings)
+    .where(eq(brandSettings.organizationId, ctx.orgId))
+    .limit(1);
+
+  if (settingsRows.length === 0) {
+    return res.status(500).json({ error: "Brand settings not found" });
+  }
+
+  const activePlatforms = settingsRows[0].activePlatforms as string[];
+  const platformCount = activePlatforms.length;
+
+  const creditCheck = await checkSufficientCredits(ctx.orgId, platformCount);
+  if (!creditCheck.sufficient) {
+    return res.status(402).json({
+      error: "Insufficient credits",
+      required: platformCount,
+      available: creditCheck.available,
+    });
+  }
+
   initSSE(res);
 
   try {
@@ -91,8 +114,13 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       memberId: ctx.memberId,
       topic: topic.trim(),
       tone,
-      onPlatformOutput: ({ platform, content, platformOutputId, generationId }) => {
+      onPlatformOutput: async ({ platform, content, platformOutputId, generationId }) => {
         sendSSEEvent(res, { platform, content, generationId, platformOutputId });
+        try {
+          await deductCredits(ctx.orgId, 1, "generation", platformOutputId, ctx.memberId);
+        } catch (err) {
+          console.error("Credit deduction failed for platform output", platformOutputId, err);
+        }
       },
     });
   } catch (err) {

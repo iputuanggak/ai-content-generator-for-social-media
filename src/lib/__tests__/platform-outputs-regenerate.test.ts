@@ -6,8 +6,10 @@ import { describe, it, expect } from "vitest";
 //  - activeOrganizationId check → 400 if no active org
 //  - id check → 400 if missing
 //  - ownership check → 403 if platformOutput doesn't belong to the active org
+//  - credit check → 402 if insufficient credits
 //  - re-generate content using topic, tone, and brand settings → 200 { id, content }
 //  - editedContent is cleared (set to null) on regeneration
+//  - deduct 1 credit after successful regeneration
 
 interface MockSession {
   user: { id: string };
@@ -44,6 +46,8 @@ async function handleRegeneratePlatformOutput({
   findBrandSettings,
   generateContent,
   updatePlatformOutput,
+  checkCredits,
+  deductCredits,
 }: {
   id: string | undefined;
   session: MockSession | null;
@@ -58,6 +62,8 @@ async function handleRegeneratePlatformOutput({
     modelId: string
   ) => Promise<string>;
   updatePlatformOutput: (id: string, content: string) => Promise<void>;
+  checkCredits: (orgId: string, amount: number) => Promise<{ sufficient: boolean; available: number }>;
+  deductCredits: (orgId: string, amount: number, type: string, refId: string, memberId: string) => Promise<void>;
 }): Promise<{ status: number; body: unknown }> {
   if (!session) return { status: 401, body: { error: "Unauthorized" } };
   if (!session.session.activeOrganizationId)
@@ -71,6 +77,11 @@ async function handleRegeneratePlatformOutput({
   const gen = await findGeneration(output.generationId);
   if (!gen || gen.organizationId !== session.session.activeOrganizationId) {
     return { status: 403, body: { error: "Forbidden" } };
+  }
+
+  const creditCheck = await checkCredits(gen.organizationId, 1);
+  if (!creditCheck.sufficient) {
+    return { status: 402, body: { error: "Insufficient credits", required: 1, available: creditCheck.available } };
   }
 
   const brandSettings = await findBrandSettings(gen.organizationId);
@@ -87,6 +98,8 @@ async function handleRegeneratePlatformOutput({
   );
 
   await updatePlatformOutput(id, newContent);
+
+  await deductCredits(gen.organizationId, 1, "regeneration", id, "member-1");
 
   return { status: 200, body: { id, content: newContent } };
 }
@@ -116,16 +129,22 @@ const authedSession: MockSession = {
   session: { activeOrganizationId: "org-1" },
 };
 
+const defaultDeps = {
+  findPlatformOutput: async () => fakeOutput,
+  findGeneration: async () => fakeGeneration,
+  findBrandSettings: async () => fakeBrandSettings,
+  generateContent: async () => "new content",
+  updatePlatformOutput: async () => {},
+  checkCredits: async () => ({ sufficient: true, available: 25 }),
+  deductCredits: async () => {},
+};
+
 describe("POST /api/platform-outputs/[id]/regenerate logic", () => {
   it("returns 401 when unauthenticated", async () => {
     const result = await handleRegeneratePlatformOutput({
       id: "po-1",
       session: null,
-      findPlatformOutput: async () => fakeOutput,
-      findGeneration: async () => fakeGeneration,
-      findBrandSettings: async () => fakeBrandSettings,
-      generateContent: async () => "new content",
-      updatePlatformOutput: async () => {},
+      ...defaultDeps,
     });
     expect(result.status).toBe(401);
   });
@@ -134,11 +153,7 @@ describe("POST /api/platform-outputs/[id]/regenerate logic", () => {
     const result = await handleRegeneratePlatformOutput({
       id: "po-1",
       session: { user: { id: "u" }, session: { activeOrganizationId: null } },
-      findPlatformOutput: async () => fakeOutput,
-      findGeneration: async () => fakeGeneration,
-      findBrandSettings: async () => fakeBrandSettings,
-      generateContent: async () => "new content",
-      updatePlatformOutput: async () => {},
+      ...defaultDeps,
     });
     expect(result.status).toBe(400);
   });
@@ -147,11 +162,8 @@ describe("POST /api/platform-outputs/[id]/regenerate logic", () => {
     const result = await handleRegeneratePlatformOutput({
       id: "nonexistent",
       session: authedSession,
+      ...defaultDeps,
       findPlatformOutput: async () => null,
-      findGeneration: async () => fakeGeneration,
-      findBrandSettings: async () => fakeBrandSettings,
-      generateContent: async () => "new content",
-      updatePlatformOutput: async () => {},
     });
     expect(result.status).toBe(404);
   });
@@ -160,13 +172,24 @@ describe("POST /api/platform-outputs/[id]/regenerate logic", () => {
     const result = await handleRegeneratePlatformOutput({
       id: "po-1",
       session: authedSession,
-      findPlatformOutput: async () => fakeOutput,
+      ...defaultDeps,
       findGeneration: async () => ({ ...fakeGeneration, organizationId: "other-org" }),
-      findBrandSettings: async () => fakeBrandSettings,
-      generateContent: async () => "new content",
-      updatePlatformOutput: async () => {},
     });
     expect(result.status).toBe(403);
+  });
+
+  it("returns 402 when insufficient credits", async () => {
+    const result = await handleRegeneratePlatformOutput({
+      id: "po-1",
+      session: authedSession,
+      ...defaultDeps,
+      checkCredits: async () => ({ sufficient: false, available: 0 }),
+    });
+    expect(result.status).toBe(402);
+    const body = result.body as { error: string; required: number; available: number };
+    expect(body.error).toBe("Insufficient credits");
+    expect(body.required).toBe(1);
+    expect(body.available).toBe(0);
   });
 
   it("calls generateContent with correct args and returns 200 with new content", async () => {
@@ -186,6 +209,8 @@ describe("POST /api/platform-outputs/[id]/regenerate logic", () => {
       updatePlatformOutput: async (id, content) => {
         updateCalls.push({ id, content });
       },
+      checkCredits: async () => ({ sufficient: true, available: 25 }),
+      deductCredits: async () => {},
     });
 
     expect(result.status).toBe(200);
@@ -201,15 +226,49 @@ describe("POST /api/platform-outputs/[id]/regenerate logic", () => {
     expect(updateCalls).toEqual([{ id: "po-1", content: "regenerated content" }]);
   });
 
+  it("deducts 1 credit after successful regeneration", async () => {
+    const deductionCalls: { orgId: string; amount: number; type: string; refId: string }[] = [];
+
+    await handleRegeneratePlatformOutput({
+      id: "po-1",
+      session: authedSession,
+      ...defaultDeps,
+      deductCredits: async (orgId, amount, type, refId) => {
+        deductionCalls.push({ orgId, amount, type, refId });
+      },
+    });
+
+    expect(deductionCalls).toHaveLength(1);
+    expect(deductionCalls[0]).toEqual({
+      orgId: "org-1",
+      amount: 1,
+      type: "regeneration",
+      refId: "po-1",
+    });
+  });
+
+  it("does not deduct credits when credit check fails", async () => {
+    const deductionCalls: { orgId: string; amount: number }[] = [];
+
+    await handleRegeneratePlatformOutput({
+      id: "po-1",
+      session: authedSession,
+      ...defaultDeps,
+      checkCredits: async () => ({ sufficient: false, available: 0 }),
+      deductCredits: async (orgId, amount) => {
+        deductionCalls.push({ orgId, amount });
+      },
+    });
+
+    expect(deductionCalls).toHaveLength(0);
+  });
+
   it("returns 500 when brand settings not found", async () => {
     const result = await handleRegeneratePlatformOutput({
       id: "po-1",
       session: authedSession,
-      findPlatformOutput: async () => fakeOutput,
-      findGeneration: async () => fakeGeneration,
+      ...defaultDeps,
       findBrandSettings: async () => null,
-      generateContent: async () => "new content",
-      updatePlatformOutput: async () => {},
     });
     expect(result.status).toBe(500);
   });

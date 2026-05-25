@@ -3,16 +3,28 @@ import {
   getAvailableCredits,
   checkSufficientCredits,
   grantStarterCredits,
+  deductCredits,
   type CreditServiceDeps,
 } from "../credit-service";
 
 function makeDbClient(scenarios: { batchRows?: object[] }) {
   const insertedRows: { table: string; values: Record<string, unknown> }[] = [];
+  const updatedRows: { table: string; values: Record<string, unknown>; where: unknown }[] = [];
+
+  const batchRows = scenarios.batchRows ?? [];
+
+  const makeWhereResult = () => {
+    const promise = Promise.resolve(batchRows) as Promise<object[]> & {
+      orderBy: (...args: unknown[]) => Promise<object[]>;
+    };
+    promise.orderBy = (..._args: unknown[]) => Promise.resolve(batchRows);
+    return promise;
+  };
 
   const mockDbClient = {
     select: () => ({
       from: (_table: unknown) => ({
-        where: (_condition: unknown) => Promise.resolve(scenarios.batchRows ?? []),
+        where: (_condition: unknown) => makeWhereResult(),
       }),
     }),
     insert: (_table: unknown) => ({
@@ -21,11 +33,21 @@ function makeDbClient(scenarios: { batchRows?: object[] }) {
         return Promise.resolve();
       },
     }),
+    update: (_table: unknown) => ({
+      set: (values: Record<string, unknown>) => ({
+        where: (condition: unknown) => {
+          updatedRows.push({ table: String(_table), values, where: condition });
+          return Promise.resolve();
+        },
+      }),
+    }),
     _insertedRows: insertedRows,
+    _updatedRows: updatedRows,
   };
 
   return mockDbClient as unknown as NonNullable<CreditServiceDeps["dbClient"]> & {
     _insertedRows: typeof insertedRows;
+    _updatedRows: typeof updatedRows;
   };
 }
 
@@ -113,5 +135,110 @@ describe("Credit Service – grantStarterCredits", () => {
 
     expect(expiresAt.getTime()).toBeGreaterThanOrEqual(minExpected.getTime());
     expect(expiresAt.getTime()).toBeLessThanOrEqual(maxExpected.getTime());
+  });
+});
+
+describe("Credit Service – deductCredits", () => {
+  it("deducts from a single batch with enough remaining", async () => {
+    const dbClient = makeDbClient({
+      batchRows: [{ id: "b1", remaining: 10 }],
+    });
+
+    await deductCredits("org-1", 3, "generation", "po-1", "member-1", { dbClient });
+
+    expect(dbClient._updatedRows).toHaveLength(1);
+    expect(dbClient._updatedRows[0].values).toMatchObject({ remaining: 7 });
+
+    expect(dbClient._insertedRows).toHaveLength(1);
+    const txn = dbClient._insertedRows[0];
+    expect(txn.values).toMatchObject({
+      organizationId: "org-1",
+      amount: -3,
+      type: "generation",
+      referenceId: "po-1",
+      memberId: "member-1",
+      batchId: "b1",
+    });
+  });
+
+  it("spans multiple batches when single batch is insufficient", async () => {
+    const dbClient = makeDbClient({
+      batchRows: [
+        { id: "b1", remaining: 2 },
+        { id: "b2", remaining: 5 },
+      ],
+    });
+
+    await deductCredits("org-1", 4, "generation", "po-1", "member-1", { dbClient });
+
+    expect(dbClient._updatedRows).toHaveLength(2);
+    expect(dbClient._updatedRows[0].values).toMatchObject({ remaining: 0 });
+    expect(dbClient._updatedRows[1].values).toMatchObject({ remaining: 3 });
+
+    expect(dbClient._insertedRows).toHaveLength(2);
+    expect(dbClient._insertedRows[0].values).toMatchObject({
+      amount: -2,
+      batchId: "b1",
+    });
+    expect(dbClient._insertedRows[1].values).toMatchObject({
+      amount: -2,
+      batchId: "b2",
+    });
+  });
+
+  it("throws when total available is less than requested", async () => {
+    const dbClient = makeDbClient({
+      batchRows: [{ id: "b1", remaining: 2 }],
+    });
+
+    await expect(
+      deductCredits("org-1", 5, "generation", "po-1", "member-1", { dbClient })
+    ).rejects.toThrow("Insufficient credits");
+
+    expect(dbClient._updatedRows).toHaveLength(0);
+    expect(dbClient._insertedRows).toHaveLength(0);
+  });
+
+  it("throws when no batches exist", async () => {
+    const dbClient = makeDbClient({ batchRows: [] });
+
+    await expect(
+      deductCredits("org-1", 1, "generation", "po-1", "member-1", { dbClient })
+    ).rejects.toThrow("Insufficient credits");
+  });
+
+  it("deducts exactly 1 credit for regeneration", async () => {
+    const dbClient = makeDbClient({
+      batchRows: [{ id: "b1", remaining: 10 }],
+    });
+
+    await deductCredits("org-1", 1, "regeneration", "po-2", "member-1", { dbClient });
+
+    expect(dbClient._updatedRows).toHaveLength(1);
+    expect(dbClient._updatedRows[0].values).toMatchObject({ remaining: 9 });
+
+    expect(dbClient._insertedRows).toHaveLength(1);
+    expect(dbClient._insertedRows[0].values).toMatchObject({
+      amount: -1,
+      type: "regeneration",
+      referenceId: "po-2",
+    });
+  });
+
+  it("deducts from oldest batches first (FIFO)", async () => {
+    const dbClient = makeDbClient({
+      batchRows: [
+        { id: "old", remaining: 1 },
+        { id: "mid", remaining: 3 },
+        { id: "new", remaining: 10 },
+      ],
+    });
+
+    await deductCredits("org-1", 5, "generation", "po-1", "member-1", { dbClient });
+
+    expect(dbClient._updatedRows).toHaveLength(3);
+    expect(dbClient._updatedRows[0].values.remaining).toBe(0);
+    expect(dbClient._updatedRows[1].values.remaining).toBe(0);
+    expect(dbClient._updatedRows[2].values.remaining).toBe(9);
   });
 });

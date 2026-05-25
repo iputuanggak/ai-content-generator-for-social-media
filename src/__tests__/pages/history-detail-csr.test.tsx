@@ -2,6 +2,8 @@
 
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 import "@testing-library/jest-dom/vitest";
 
 const mockTeamContext = {
@@ -62,6 +64,13 @@ global.fetch = mockFetch;
 
 import HistoryDetailPage from "../../pages/[slug]/history/[id]";
 
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = new QueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+  );
+}
+
 describe("HistoryDetailPage CSR conversion", () => {
   afterEach(() => {
     cleanup();
@@ -69,7 +78,7 @@ describe("HistoryDetailPage CSR conversion", () => {
   });
 
   it("renders without getServerSideProps (CSR)", async () => {
-    render(<HistoryDetailPage />);
+    renderWithProviders(<HistoryDetailPage />);
     await screen.findByText("Summer sale campaign");
     expect(screen.getByText("Summer sale campaign")).toBeInTheDocument();
   });
@@ -82,7 +91,7 @@ describe("HistoryDetailPage CSR conversion", () => {
           resolveFetch = resolve;
         })
     );
-    const { container } = render(<HistoryDetailPage />);
+    const { container } = renderWithProviders(<HistoryDetailPage />);
     expect(container.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
     resolveFetch!({
       ok: true,
@@ -91,26 +100,26 @@ describe("HistoryDetailPage CSR conversion", () => {
   });
 
   it("fetches generation data from API on mount", async () => {
-    render(<HistoryDetailPage />);
+    renderWithProviders(<HistoryDetailPage />);
     await screen.findByText("Summer sale campaign");
     expect(mockFetch).toHaveBeenCalledWith("/api/acme/generations/gen-1");
   });
 
   it("displays generation topic and tone", async () => {
-    render(<HistoryDetailPage />);
+    renderWithProviders(<HistoryDetailPage />);
     await screen.findByText("Summer sale campaign");
     expect(screen.getByText("Casual")).toBeInTheDocument();
   });
 
   it("displays platform outputs", async () => {
-    render(<HistoryDetailPage />);
+    renderWithProviders(<HistoryDetailPage />);
     await screen.findByText("Summer sale campaign");
     expect(screen.getByText("Twitter / X")).toBeInTheDocument();
     expect(screen.getByText("LinkedIn")).toBeInTheDocument();
   });
 
   it("shows back link to history", async () => {
-    render(<HistoryDetailPage />);
+    renderWithProviders(<HistoryDetailPage />);
     await screen.findByText("Summer sale campaign");
     const backLink = screen.getByText("← Back to History");
     expect(backLink.closest("a")).toHaveAttribute("href", "/acme/history");
@@ -120,7 +129,7 @@ describe("HistoryDetailPage CSR conversion", () => {
     vi.doMock("next/router", () => ({
       useRouter: () => ({ push: vi.fn(), pathname: "/[slug]/history/[id]", query: { slug: "acme", id: "gen-404" } }),
     }));
-    const { container } = render(<HistoryDetailPage />);
+    const { container } = renderWithProviders(<HistoryDetailPage />);
     await waitFor(() => {
       expect(container.querySelector('[data-slot="skeleton"]')).not.toBeInTheDocument();
     });

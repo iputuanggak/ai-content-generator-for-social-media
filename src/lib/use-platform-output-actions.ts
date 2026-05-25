@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export interface OutputState {
@@ -10,6 +11,7 @@ export interface OutputState {
 
 export function usePlatformOutputActions(slug: string, generationId: string) {
   const [outputStates, setOutputStates] = useState<Record<string, OutputState>>({});
+  const queryClient = useQueryClient();
 
   function setOutputState(outputId: string, patch: Partial<OutputState>) {
     setOutputStates((prev) => ({
@@ -87,6 +89,10 @@ export function usePlatformOutputActions(slug: string, generationId: string) {
           },
         }));
         toast("Content regenerated");
+        queryClient.invalidateQueries({ queryKey: ["credits", slug] });
+      } else if (res.status === 402) {
+        setOutputState(outputId, { isRegenerating: false });
+        toast.error("Insufficient credits. Please top up to regenerate.");
       } else {
         setOutputState(outputId, { isRegenerating: false });
         toast.error("Regeneration failed");

@@ -2,6 +2,8 @@
 
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 import "@testing-library/jest-dom/vitest";
 
 const mockTeamContext = {
@@ -89,14 +91,24 @@ describe("HistoryDetailPage email verification redirect", () => {
   it("renders nothing when useRequireVerifiedEmail returns loading", () => {
     mockHookLoading = true;
 
-    const { container } = render(<HistoryDetailPage />);
+    const queryClient = new QueryClient();
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <HistoryDetailPage />
+      </QueryClientProvider>
+    );
     expect(container.innerHTML).toBe("");
   });
 
   it("renders content when useRequireVerifiedEmail returns not loading", async () => {
     mockHookLoading = false;
 
-    render(<HistoryDetailPage />);
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <HistoryDetailPage />
+      </QueryClientProvider>
+    );
     await waitFor(() => {
       expect(screen.getByText("Summer sale campaign")).toBeInTheDocument();
     });

@@ -6,6 +6,7 @@ import { buildPrompts, type Platform, type Tone } from "@/lib/content-adapter";
 import { callOpenRouter } from "@/lib/openrouter-client";
 import { withSlugSession } from "@/lib/with-session";
 import { fetchPlatformOutputForOrg } from "@/lib/platform-output-ownership";
+import { checkSufficientCredits, deductCredits } from "@/lib/credit-service";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "POST") {
@@ -31,6 +32,15 @@ async function handleRegenerate(req: NextApiRequest, res: NextApiResponse) {
     return res.status(403).json({ error: "Forbidden" });
   }
   const { output, gen } = ownership;
+
+  const creditCheck = await checkSufficientCredits(ctx.orgId, 1);
+  if (!creditCheck.sufficient) {
+    return res.status(402).json({
+      error: "Insufficient credits",
+      required: 1,
+      available: creditCheck.available,
+    });
+  }
 
   const settingsRows = await db
     .select()
@@ -60,6 +70,12 @@ async function handleRegenerate(req: NextApiRequest, res: NextApiResponse) {
     .update(platformOutput)
     .set({ content: newContent, editedContent: null, updatedAt: new Date() })
     .where(eq(platformOutput.id, id));
+
+  try {
+    await deductCredits(ctx.orgId, 1, "regeneration", id, ctx.memberId);
+  } catch (err) {
+    console.error("Credit deduction failed for regeneration", id, err);
+  }
 
   return res.status(200).json({ id, content: newContent });
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useTeam } from "@/lib/team-context";
 import type { Tone, Platform } from "@/lib/content-adapter";
@@ -50,6 +51,7 @@ export default function DashboardPage() {
 
 function DashboardContent() {
   const { userName, teamName, teamId, slug, loading: teamLoading } = useTeam();
+  const queryClient = useQueryClient();
 
   const [brandSettingsLoaded, setBrandSettingsLoaded] = useState(false);
   const [defaultTone, setDefaultTone] = useState<Tone>(DEFAULT_TONE);
@@ -59,10 +61,10 @@ function DashboardContent() {
   const toneDetermined = useRef(false);
   const [tone, setTone] = useState<Tone>(DEFAULT_TONE);
   const [isGenerating, setIsGenerating] = useState(false);
-  // Maps platform name → platformOutputId (for routing actions to hook)
   const [platformToOutputId, setPlatformToOutputId] = useState<Record<string, string>>({});
   const [loadingPlatforms, setLoadingPlatforms] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [insufficientCredits, setInsufficientCredits] = useState<{ required: number; available: number } | null>(null);
   const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
   const [intendedPublishAt, setIntendedPublishAt] = useState<Date | undefined>(undefined);
   const [isSavingPublishDate, setIsSavingPublishDate] = useState(false);
@@ -117,6 +119,7 @@ function DashboardContent() {
     setIsGenerating(true);
     setPlatformToOutputId({});
     setError(null);
+    setInsufficientCredits(null);
     setCurrentGenerationId(null);
     setIntendedPublishAt(undefined);
     setLoadingPlatforms(new Set(activePlatforms));
@@ -129,8 +132,12 @@ function DashboardContent() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        setError(data.error ?? "Generation failed");
+        const data = await response.json() as { error?: string; required?: number; available?: number };
+        if (response.status === 402 && data.required != null && data.available != null) {
+          setInsufficientCredits({ required: data.required, available: data.available });
+        } else {
+          setError(data.error ?? "Generation failed");
+        }
         setIsGenerating(false);
         setLoadingPlatforms(new Set());
         return;
@@ -190,6 +197,8 @@ function DashboardContent() {
           }
         }
       }
+
+      queryClient.invalidateQueries({ queryKey: ["credits", slug] });
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -291,12 +300,26 @@ function DashboardContent() {
                     </div>
                   )}
 
-                  <Button
-                    type="submit"
-                    disabled={isGenerating || !topic.trim()}
-                  >
-                    {isGenerating ? "Generating…" : "Generate"}
-                  </Button>
+                  {insufficientCredits && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      You need {insufficientCredits.required} credit{insufficientCredits.required !== 1 ? "s" : ""} but only have {insufficientCredits.available}.{" "}
+                      <Link href={`/${slug}/credits`} className="font-medium underline hover:text-red-900">
+                        Top up now
+                      </Link>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-4">
+                    <Button
+                      type="submit"
+                      disabled={isGenerating || !topic.trim()}
+                    >
+                      {isGenerating ? "Generating…" : "Generate"}
+                    </Button>
+                    <span className="text-sm text-zinc-500">
+                      This will cost {activePlatforms.length} credit{activePlatforms.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
                 </form>
               </div>
             </section>
