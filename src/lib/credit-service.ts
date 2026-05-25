@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { eq, and, gt, asc } from "drizzle-orm";
+import { eq, and, gt, asc, desc, lte } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { creditBatch, creditTransaction } from "@/lib/db/schema";
 
@@ -127,4 +127,78 @@ export async function deductCredits(
 
     remaining -= deduction;
   }
+}
+
+export async function getTransactionHistory(
+  organizationId: string,
+  page: number,
+  pageSize: number,
+  deps: CreditServiceDeps = {}
+): Promise<{ items: { id: string; amount: number; type: string; referenceId: string | null; batchId: string | null; createdAt: Date }[]; total: number; page: number; pageSize: number }> {
+  const dbClient = deps.dbClient ?? db;
+
+  const rows = await dbClient
+    .select({
+      id: creditTransaction.id,
+      amount: creditTransaction.amount,
+      type: creditTransaction.type,
+      referenceId: creditTransaction.referenceId,
+      batchId: creditTransaction.batchId,
+      createdAt: creditTransaction.createdAt,
+    })
+    .from(creditTransaction)
+    .where(eq(creditTransaction.organizationId, organizationId))
+    .orderBy(desc(creditTransaction.createdAt))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  return {
+    items: rows.map((r) => ({
+      id: r.id,
+      amount: r.amount,
+      type: r.type,
+      referenceId: r.referenceId,
+      batchId: r.batchId,
+      createdAt: r.createdAt,
+    })),
+    total: rows.length,
+    page,
+    pageSize,
+  };
+}
+
+export async function getExpiringBatches(
+  organizationId: string,
+  withinDays: number,
+  deps: CreditServiceDeps = {}
+): Promise<{ id: string; remaining: number; expiresAt: Date; createdAt: Date; initialAmount: number }[]> {
+  const dbClient = deps.dbClient ?? db;
+  const now = new Date();
+  const cutoff = new Date(now.getTime() + withinDays * 24 * 60 * 60 * 1000);
+
+  const rows = await dbClient
+    .select({
+      id: creditBatch.id,
+      remaining: creditBatch.remaining,
+      expiresAt: creditBatch.expiresAt,
+      createdAt: creditBatch.createdAt,
+      initialAmount: creditBatch.initialAmount,
+    })
+    .from(creditBatch)
+    .where(
+      and(
+        eq(creditBatch.organizationId, organizationId),
+        gt(creditBatch.remaining, 0),
+        gt(creditBatch.expiresAt, now),
+        lte(creditBatch.expiresAt, cutoff)
+      )
+    );
+
+  return rows.map((r) => ({
+    id: r.id,
+    remaining: r.remaining,
+    expiresAt: r.expiresAt,
+    createdAt: r.createdAt,
+    initialAmount: r.initialAmount,
+  }));
 }

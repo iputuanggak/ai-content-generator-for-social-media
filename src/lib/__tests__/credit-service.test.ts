@@ -4,6 +4,8 @@ import {
   checkSufficientCredits,
   grantStarterCredits,
   deductCredits,
+  getTransactionHistory,
+  getExpiringBatches,
   type CreditServiceDeps,
 } from "../credit-service";
 
@@ -240,5 +242,97 @@ describe("Credit Service – deductCredits", () => {
     expect(dbClient._updatedRows[0].values.remaining).toBe(0);
     expect(dbClient._updatedRows[1].values.remaining).toBe(0);
     expect(dbClient._updatedRows[2].values.remaining).toBe(9);
+  });
+});
+
+function makeTransactionDbClient(transactionRows: object[], totalCount: number) {
+  const mockDbClient = {
+    select: () => ({
+      from: (_table: unknown) => ({
+        where: (_condition: unknown) => ({
+          orderBy: (..._args: unknown[]) => ({
+            limit: (_n: unknown) => ({
+              offset: (_n: unknown) => Promise.resolve(transactionRows),
+            }),
+          }),
+        }),
+      }),
+    }),
+    _totalCount: totalCount,
+  };
+
+  return mockDbClient as unknown as NonNullable<CreditServiceDeps["dbClient"]> & {
+    _totalCount: number;
+  };
+}
+
+function makeExpiringBatchesDbClient(batchRows: object[]) {
+  const mockDbClient = {
+    select: () => ({
+      from: (_table: unknown) => ({
+        where: (_condition: unknown) => Promise.resolve(batchRows),
+      }),
+    }),
+  };
+
+  return mockDbClient as unknown as NonNullable<CreditServiceDeps["dbClient"]>;
+}
+
+describe("Credit Service – getTransactionHistory", () => {
+  it("returns paginated transaction results with correct shape", async () => {
+    const rows = [
+      { id: "t1", amount: -1, type: "generation", referenceId: "po-1", batchId: "b1", createdAt: new Date("2025-01-02") },
+      { id: "t2", amount: 25, type: "starter_grant", referenceId: null, batchId: "b2", createdAt: new Date("2025-01-01") },
+    ];
+
+    const dbClient = makeTransactionDbClient(rows, 2);
+
+    const result = await getTransactionHistory("org-1", 1, 20, { dbClient });
+
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]).toMatchObject({
+      id: "t1",
+      amount: -1,
+      type: "generation",
+      referenceId: "po-1",
+      batchId: "b1",
+    });
+    expect(result.total).toBe(2);
+    expect(result.page).toBe(1);
+    expect(result.pageSize).toBe(20);
+  });
+
+  it("returns empty items when no transactions exist", async () => {
+    const dbClient = makeTransactionDbClient([], 0);
+
+    const result = await getTransactionHistory("org-1", 1, 20, { dbClient });
+
+    expect(result.items).toHaveLength(0);
+    expect(result.total).toBe(0);
+  });
+});
+
+describe("Credit Service – getExpiringBatches", () => {
+  it("returns batches expiring within specified days", async () => {
+    const rows = [
+      { id: "b1", remaining: 10, expiresAt: new Date("2025-02-01"), createdAt: new Date("2025-01-01") },
+      { id: "b2", remaining: 5, expiresAt: new Date("2025-01-20"), createdAt: new Date("2025-01-01") },
+    ];
+
+    const dbClient = makeExpiringBatchesDbClient(rows);
+
+    const result = await getExpiringBatches("org-1", 30, { dbClient });
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({ id: "b1", remaining: 10 });
+    expect(result[1]).toMatchObject({ id: "b2", remaining: 5 });
+  });
+
+  it("returns empty array when no batches are expiring", async () => {
+    const dbClient = makeExpiringBatchesDbClient([]);
+
+    const result = await getExpiringBatches("org-1", 30, { dbClient });
+
+    expect(result).toHaveLength(0);
   });
 });
