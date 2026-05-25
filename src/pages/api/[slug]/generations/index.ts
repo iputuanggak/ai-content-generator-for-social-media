@@ -8,7 +8,7 @@ import { TONE_OPTIONS } from "@/lib/content-adapter";
 import { generateContent } from "@/lib/generation-service";
 import { initSSE, sendSSEEvent, closeSSE } from "@/lib/sse";
 import { MAX_TOPIC_LENGTH, validateLength } from "@/lib/input-validation";
-import { checkSufficientCredits, deductCredits } from "@/lib/credit-service";
+import { withCreditGuard } from "@/lib/credit-guard";
 
 export const config = {
   api: {
@@ -97,44 +97,43 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   const activePlatforms = settingsRows[0].activePlatforms as string[];
   const platformCount = activePlatforms.length;
 
-  const creditCheck = await checkSufficientCredits(ctx.orgId, platformCount);
-  if (!creditCheck.sufficient) {
+  initSSE(res);
+
+  const guardResult = await withCreditGuard<void>({
+    organizationId: ctx.orgId,
+    memberId: ctx.memberId,
+    creditCost: platformCount,
+    creditType: "generation",
+    async execute() {
+      let capturedGenerationId: string | null = null;
+
+      try {
+        await generateContent({
+          organizationId: ctx.orgId,
+          memberId: ctx.memberId,
+          topic: topic.trim(),
+          tone,
+          onPlatformOutput: async ({ platform, content, platformOutputId, generationId }) => {
+            capturedGenerationId = generationId;
+            sendSSEEvent(res, { platform, content, generationId, platformOutputId });
+          },
+        });
+      } catch (err) {
+        console.error("Generation error:", err);
+        sendSSEEvent(res, { error: "Generation failed for one or more platforms" });
+      }
+
+      return { referenceId: capturedGenerationId ?? "unknown", data: undefined };
+    },
+  });
+
+  closeSSE(res);
+
+  if (guardResult.status === "insufficient") {
     return res.status(402).json({
       error: "Insufficient credits",
       required: platformCount,
-      available: creditCheck.available,
+      available: guardResult.available,
     });
   }
-
-  let capturedGenerationId: string | null = null;
-  const successfulOutputCount = { value: 0 };
-
-  initSSE(res);
-
-  try {
-    await generateContent({
-      organizationId: ctx.orgId,
-      memberId: ctx.memberId,
-      topic: topic.trim(),
-      tone,
-      onPlatformOutput: async ({ platform, content, platformOutputId, generationId }) => {
-        capturedGenerationId = generationId;
-        successfulOutputCount.value++;
-        sendSSEEvent(res, { platform, content, generationId, platformOutputId });
-      },
-    });
-  } catch (err) {
-    console.error("Generation error:", err);
-    sendSSEEvent(res, { error: "Generation failed for one or more platforms" });
-  }
-
-  if (successfulOutputCount.value > 0 && capturedGenerationId) {
-    try {
-      await deductCredits(ctx.orgId, successfulOutputCount.value, "generation", capturedGenerationId, ctx.memberId);
-    } catch (err) {
-      console.error("Credit deduction failed for generation", capturedGenerationId, err);
-    }
-  }
-
-  closeSSE(res);
 }

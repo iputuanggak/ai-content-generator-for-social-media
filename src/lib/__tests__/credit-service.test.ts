@@ -9,6 +9,7 @@ import {
   getExpiringBatches,
   computeRunningBalance,
   backfillRunningBalances,
+  expireStaleBatches,
   type CreditServiceDeps,
 } from "../credit-service";
 
@@ -18,30 +19,30 @@ function makeDbClient(scenarios: { batchRows?: object[] }) {
 
   const batchRows = scenarios.batchRows ?? [];
 
-  const makeWhereResult = () => {
-    const promise = Promise.resolve(batchRows) as Promise<object[]> & {
-      orderBy: (...args: unknown[]) => Promise<object[]>;
+  const makeWhereResult = (rows: object[]) => {
+    const promise = Promise.resolve(rows) as Promise<object[]> & {
+      orderBy: (...rest: unknown[]) => Promise<object[]>;
     };
-    promise.orderBy = (..._args: unknown[]) => Promise.resolve(batchRows);
+    promise.orderBy = () => Promise.resolve(rows);
     return promise;
   };
 
   const mockDbClient = {
     select: () => ({
-      from: (_table: unknown) => ({
-        where: (_condition: unknown) => makeWhereResult(),
+      from: () => ({
+        where: () => makeWhereResult(batchRows),
       }),
     }),
-    insert: (_table: unknown) => ({
+    insert: () => ({
       values: (values: Record<string, unknown>) => {
-        insertedRows.push({ table: String(_table), values });
+        insertedRows.push({ table: "mock", values });
         return Promise.resolve();
       },
     }),
-    update: (_table: unknown) => ({
+    update: () => ({
       set: (values: Record<string, unknown>) => ({
         where: (condition: unknown) => {
-          updatedRows.push({ table: String(_table), values, where: condition });
+          updatedRows.push({ table: "mock", values, where: condition });
           return Promise.resolve();
         },
       }),
@@ -639,5 +640,143 @@ describe("Credit Service – backfillRunningBalances", () => {
     });
 
     expect(updatedRows).toHaveLength(0);
+  });
+});
+
+describe("Credit Service – expireStaleBatches", () => {
+  function makeExpiryDbClient(scenarios: {
+    staleBatches: { id: string; remaining: number }[];
+    activeBalance: number;
+  }) {
+    const updatedRows: { values: Record<string, unknown>; where: unknown }[] = [];
+    const insertedRows: { table: string; values: Record<string, unknown> }[] = [];
+
+    let selectCallIndex = 0;
+
+    const mockDbClient = {
+      select: () => ({
+        from: () => ({
+          where: () => {
+            selectCallIndex++;
+            if (selectCallIndex === 1) {
+              return Promise.resolve(scenarios.staleBatches);
+            }
+            if (selectCallIndex === 2) {
+              return Promise.resolve(
+                scenarios.activeBalance > 0
+                  ? [{ remaining: scenarios.activeBalance }]
+                  : []
+              );
+            }
+            return Promise.resolve([]);
+          },
+        }),
+      }),
+      update: () => ({
+        set: (values: Record<string, unknown>) => ({
+          where: (condition: unknown) => {
+            updatedRows.push({ values, where: condition });
+            return Promise.resolve();
+          },
+        }),
+      }),
+      insert: () => ({
+        values: (values: Record<string, unknown>) => {
+          insertedRows.push({ table: "credit_transaction", values });
+          return Promise.resolve();
+        },
+      }),
+      _updatedRows: updatedRows,
+      _insertedRows: insertedRows,
+    };
+
+    return mockDbClient as unknown as NonNullable<CreditServiceDeps["dbClient"]> & {
+      _updatedRows: typeof updatedRows;
+      _insertedRows: typeof insertedRows;
+    };
+  }
+
+  it("zeros out stale batches and creates a batch_expiry transaction", async () => {
+    const dbClient = makeExpiryDbClient({
+      staleBatches: [
+        { id: "b1", remaining: 5 },
+        { id: "b2", remaining: 3 },
+      ],
+      activeBalance: 20,
+    });
+
+    const result = await expireStaleBatches("org-1", { dbClient });
+
+    expect(result).toBe(8);
+    expect(dbClient._updatedRows).toHaveLength(2);
+    expect(dbClient._updatedRows[0].values).toEqual({ remaining: 0 });
+    expect(dbClient._updatedRows[1].values).toEqual({ remaining: 0 });
+
+    expect(dbClient._insertedRows).toHaveLength(1);
+    expect(dbClient._insertedRows[0].values).toMatchObject({
+      organizationId: "org-1",
+      amount: -8,
+      type: "batch_expiry",
+      balanceBefore: 20,
+      balanceAfter: 12,
+    });
+  });
+
+  it("returns 0 and does nothing when no batches are stale", async () => {
+    const dbClient = makeExpiryDbClient({
+      staleBatches: [],
+      activeBalance: 25,
+    });
+
+    const result = await expireStaleBatches("org-1", { dbClient });
+
+    expect(result).toBe(0);
+    expect(dbClient._updatedRows).toHaveLength(0);
+    expect(dbClient._insertedRows).toHaveLength(0);
+  });
+
+  it("handles expiry when there are no active batches", async () => {
+    const dbClient = makeExpiryDbClient({
+      staleBatches: [{ id: "b1", remaining: 10 }],
+      activeBalance: 0,
+    });
+
+    const result = await expireStaleBatches("org-1", { dbClient });
+
+    expect(result).toBe(10);
+    expect(dbClient._insertedRows).toHaveLength(1);
+    expect(dbClient._insertedRows[0].values).toMatchObject({
+      amount: -10,
+      balanceBefore: 0,
+      balanceAfter: -10,
+    });
+  });
+
+  it("records memberId as null on batch_expiry transaction", async () => {
+    const dbClient = makeExpiryDbClient({
+      staleBatches: [{ id: "b1", remaining: 5 }],
+      activeBalance: 10,
+    });
+
+    await expireStaleBatches("org-1", { dbClient });
+
+    expect(dbClient._insertedRows[0].values).toMatchObject({
+      type: "batch_expiry",
+      memberId: null,
+    });
+  });
+
+  it("records referenceId as null on batch_expiry transaction", async () => {
+    const dbClient = makeExpiryDbClient({
+      staleBatches: [{ id: "b1", remaining: 5 }],
+      activeBalance: 10,
+    });
+
+    await expireStaleBatches("org-1", { dbClient });
+
+    expect(dbClient._insertedRows[0].values).toMatchObject({
+      type: "batch_expiry",
+      referenceId: null,
+    });
   });
 });

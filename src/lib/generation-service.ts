@@ -1,15 +1,3 @@
-/**
- * Generation Service
- *
- * Orchestrates the full content generation event:
- * 1. Reads Brand Settings from the database
- * 2. Inserts the Generation record (before any LLM calls so streaming can reference it)
- * 3. Calls Content Adapter per platform to build prompt pairs
- * 4. Calls OpenRouter Client concurrently for all platforms
- * 5. Persists each PlatformOutput row as it completes, then fires onPlatformOutput
- * 6. Returns the full result
- */
-
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -61,7 +49,6 @@ export async function generateContent(
 ): Promise<GenerationResult> {
   const dbClient = deps.dbClient ?? db;
 
-  // 1. Read Brand Settings
   const settings = await dbClient
     .select()
     .from(brandSettings)
@@ -77,7 +64,6 @@ export async function generateContent(
   const modelId = brandSetting.modelId;
   const brandVoice = brandSetting.brandVoice;
 
-  // 2. Insert generation record first so the ID is available for streaming
   const generationId = randomUUID();
   const now = new Date();
 
@@ -91,7 +77,6 @@ export async function generateContent(
     createdAt: now,
   });
 
-  // 3. Generate concurrently; persist each output as it arrives and notify via callback
   const platformOutputResults: PlatformOutputResult[] = [];
 
   await Promise.all(
@@ -134,4 +119,54 @@ export async function generateContent(
     tone: input.tone,
     platformOutputs: platformOutputResults,
   };
+}
+
+export interface RegeneratePlatformOutputInput {
+  organizationId: string;
+  platformOutputId: string;
+  topic: string;
+  tone: Tone;
+  platform: Platform;
+}
+
+export async function regeneratePlatformOutput(
+  input: RegeneratePlatformOutputInput,
+  deps: GenerationServiceDeps = {}
+): Promise<string> {
+  const dbClient = deps.dbClient ?? db;
+
+  const settings = await dbClient
+    .select()
+    .from(brandSettings)
+    .where(eq(brandSettings.organizationId, input.organizationId))
+    .limit(1);
+
+  if (settings.length === 0) {
+    throw new Error(`Brand settings not found for organization ${input.organizationId}`);
+  }
+
+  const brandSetting = settings[0];
+  const modelId = brandSetting.modelId;
+  const brandVoice = brandSetting.brandVoice;
+
+  const { systemPrompt, userPrompt } = buildPrompts(
+    input.topic,
+    input.tone,
+    brandVoice,
+    input.platform
+  );
+
+  const newContent = await callOpenRouter({
+    modelId,
+    systemPrompt,
+    userPrompt,
+    fetchFn: deps.openRouterFetch,
+  });
+
+  await dbClient
+    .update(platformOutput)
+    .set({ content: newContent, editedContent: null, updatedAt: new Date() })
+    .where(eq(platformOutput.id, input.platformOutputId));
+
+  return newContent;
 }

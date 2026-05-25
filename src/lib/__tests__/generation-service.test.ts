@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { generateContent } from "../generation-service";
+import { describe, it, expect, beforeEach } from "vitest";
+import { generateContent, regeneratePlatformOutput } from "../generation-service";
 import type { GenerationServiceDeps } from "../generation-service";
 
 // Mock db client
@@ -23,7 +23,7 @@ function makeDbClient(brandSettingsRows: object[]) {
     _insertedRows: insertedRows,
   };
 
-  return mockDbClient as unknown as Parameters<typeof generateContent>[1]["dbClient"] & {
+  return mockDbClient as unknown as NonNullable<GenerationServiceDeps["dbClient"]> & {
     _insertedRows: typeof insertedRows;
   };
 }
@@ -146,5 +146,121 @@ describe("Generation Service – generateContent", () => {
     );
 
     expect(capturedBody).toContain("bold and direct");
+  });
+});
+
+describe("Generation Service – regeneratePlatformOutput", () => {
+  beforeEach(() => {
+    process.env.OPENROUTER_API_KEY = "test-key";
+  });
+
+  function makeRegenDbClient(brandSettingsRows: object[]) {
+    const updatedRows: { values: Record<string, unknown>; where: unknown }[] = [];
+
+    const mockDbClient = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: () => Promise.resolve(brandSettingsRows),
+          }),
+        }),
+      }),
+      update: () => ({
+        set: (values: Record<string, unknown>) => ({
+          where: (condition: unknown) => {
+            updatedRows.push({ values, where: condition });
+            return Promise.resolve();
+          },
+        }),
+      }),
+      _updatedRows: updatedRows,
+    };
+
+    return mockDbClient as unknown as NonNullable<GenerationServiceDeps["dbClient"]> & {
+      _updatedRows: typeof updatedRows;
+    };
+  }
+
+  it("returns new content and updates the platform output row", async () => {
+    const dbClient = makeRegenDbClient([defaultBrandSettings]);
+
+    const result = await regeneratePlatformOutput(
+      {
+        organizationId: "org-1",
+        platformOutputId: "po-1",
+        topic: "AI news",
+        tone: "professional",
+        platform: "twitter",
+      },
+      { dbClient, openRouterFetch: makeFetch("Fresh regenerated post") }
+    );
+
+    expect(result).toBe("Fresh regenerated post");
+    expect(dbClient._updatedRows).toHaveLength(1);
+    expect(dbClient._updatedRows[0].values).toMatchObject({
+      content: "Fresh regenerated post",
+      editedContent: null,
+    });
+  });
+
+  it("throws when brand settings are not found", async () => {
+    const dbClient = makeRegenDbClient([]);
+
+    await expect(
+      regeneratePlatformOutput(
+        {
+          organizationId: "unknown-org",
+          platformOutputId: "po-1",
+          topic: "topic",
+          tone: "casual",
+          platform: "linkedin",
+        },
+        { dbClient, openRouterFetch: makeFetch("post") }
+      )
+    ).rejects.toThrow("Brand settings not found");
+  });
+
+  it("uses brand voice in the prompt", async () => {
+    const dbClient = makeRegenDbClient([defaultBrandSettings]);
+    let capturedBody: string | null = null;
+    const fetchFn = async (_url: string | URL | Request, init?: RequestInit) => {
+      if (init?.body && !capturedBody) capturedBody = init.body as string;
+      return {
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => ({ choices: [{ message: { content: "post" } }] }),
+      } as Response;
+    };
+
+    await regeneratePlatformOutput(
+      {
+        organizationId: "org-1",
+        platformOutputId: "po-1",
+        topic: "topic",
+        tone: "casual",
+        platform: "twitter",
+      },
+      { dbClient, openRouterFetch: fetchFn }
+    );
+
+    expect(capturedBody).toContain("bold and direct");
+  });
+
+  it("clears editedContent on regeneration", async () => {
+    const dbClient = makeRegenDbClient([defaultBrandSettings]);
+
+    await regeneratePlatformOutput(
+      {
+        organizationId: "org-1",
+        platformOutputId: "po-1",
+        topic: "topic",
+        tone: "professional",
+        platform: "twitter",
+      },
+      { dbClient, openRouterFetch: makeFetch("new content") }
+    );
+
+    expect(dbClient._updatedRows[0].values.editedContent).toBeNull();
   });
 });

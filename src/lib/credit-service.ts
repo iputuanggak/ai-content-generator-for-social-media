@@ -3,8 +3,11 @@ import { eq, and, gt, asc, desc, lte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { creditBatch, creditTransaction } from "@/lib/db/schema";
 
+type DbClient = typeof db;
+type DbTx = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
+
 export interface CreditServiceDeps {
-  dbClient?: typeof db;
+  dbClient?: DbClient;
 }
 
 export async function getAvailableCredits(
@@ -84,53 +87,62 @@ export async function deductCredits(
   deps: CreditServiceDeps = {}
 ): Promise<void> {
   const dbClient = deps.dbClient ?? db;
-  const now = new Date();
 
-  const batches = await dbClient
-    .select()
-    .from(creditBatch)
-    .where(
-      and(
-        eq(creditBatch.organizationId, organizationId),
-        gt(creditBatch.remaining, 0),
-        gt(creditBatch.expiresAt, now)
+  const execute = async (tx: DbClient | DbTx) => {
+    const now = new Date();
+
+    const batches = await tx
+      .select()
+      .from(creditBatch)
+      .where(
+        and(
+          eq(creditBatch.organizationId, organizationId),
+          gt(creditBatch.remaining, 0),
+          gt(creditBatch.expiresAt, now)
+        )
       )
-    )
-    .orderBy(asc(creditBatch.createdAt));
+      .orderBy(asc(creditBatch.createdAt));
 
-  const totalAvailable = batches.reduce((sum, b) => sum + (b.remaining ?? 0), 0);
-  if (totalAvailable < amount) {
-    throw new Error(`Insufficient credits: need ${amount}, have ${totalAvailable}`);
+    const totalAvailable = batches.reduce((sum, b) => sum + (b.remaining ?? 0), 0);
+    if (totalAvailable < amount) {
+      throw new Error(`Insufficient credits: need ${amount}, have ${totalAvailable}`);
+    }
+
+    const balanceBefore = totalAvailable;
+
+    let remaining = amount;
+
+    for (const batch of batches) {
+      if (remaining <= 0) break;
+
+      const deduction = Math.min(batch.remaining!, remaining);
+
+      await tx
+        .update(creditBatch)
+        .set({ remaining: batch.remaining! - deduction })
+        .where(eq(creditBatch.id, batch.id));
+
+      remaining -= deduction;
+    }
+
+    await tx.insert(creditTransaction).values({
+      id: randomUUID(),
+      organizationId,
+      amount: -amount,
+      type,
+      referenceId,
+      memberId,
+      balanceBefore,
+      balanceAfter: balanceBefore - amount,
+      createdAt: now,
+    });
+  };
+
+  try {
+    await dbClient.transaction(execute);
+  } catch {
+    await execute(dbClient);
   }
-
-  const balanceBefore = totalAvailable;
-
-  let remaining = amount;
-
-  for (const batch of batches) {
-    if (remaining <= 0) break;
-
-    const deduction = Math.min(batch.remaining!, remaining);
-
-    await dbClient
-      .update(creditBatch)
-      .set({ remaining: batch.remaining! - deduction })
-      .where(eq(creditBatch.id, batch.id));
-
-    remaining -= deduction;
-  }
-
-  await dbClient.insert(creditTransaction).values({
-    id: randomUUID(),
-    organizationId,
-    amount: -amount,
-    type,
-    referenceId,
-    memberId,
-    balanceBefore,
-    balanceAfter: balanceBefore - amount,
-    createdAt: now,
-  });
 }
 
 export async function getTransactionHistory(
@@ -297,4 +309,71 @@ export async function getExpiringBatches(
     createdAt: r.createdAt,
     initialAmount: r.initialAmount,
   }));
+}
+
+export async function expireStaleBatches(
+  organizationId: string,
+  deps: CreditServiceDeps = {}
+): Promise<number> {
+  const dbClient = deps.dbClient ?? db;
+  const now = new Date();
+
+  const stale = await dbClient
+    .select({
+      id: creditBatch.id,
+      remaining: creditBatch.remaining,
+    })
+    .from(creditBatch)
+    .where(
+      and(
+        eq(creditBatch.organizationId, organizationId),
+        gt(creditBatch.remaining, 0),
+        lte(creditBatch.expiresAt, now)
+      )
+    );
+
+  if (stale.length === 0) return 0;
+
+  const totalExpired = stale.reduce((sum, b) => sum + (b.remaining ?? 0), 0);
+  const balanceBefore = await sumAvailableBalance(dbClient, organizationId, now);
+
+  for (const batch of stale) {
+    await dbClient
+      .update(creditBatch)
+      .set({ remaining: 0 })
+      .where(eq(creditBatch.id, batch.id));
+  }
+
+  await dbClient.insert(creditTransaction).values({
+    id: randomUUID(),
+    organizationId,
+    amount: -totalExpired,
+    type: "batch_expiry",
+    referenceId: null,
+    memberId: null,
+    balanceBefore,
+    balanceAfter: balanceBefore - totalExpired,
+    createdAt: now,
+  });
+
+  return totalExpired;
+}
+
+async function sumAvailableBalance(
+  dbClient: DbClient | DbTx,
+  organizationId: string,
+  now: Date
+): Promise<number> {
+  const rows = await dbClient
+    .select({ remaining: creditBatch.remaining })
+    .from(creditBatch)
+    .where(
+      and(
+        eq(creditBatch.organizationId, organizationId),
+        gt(creditBatch.remaining, 0),
+        gt(creditBatch.expiresAt, now)
+      )
+    );
+
+  return rows.reduce((sum, r) => sum + (r.remaining ?? 0), 0);
 }
