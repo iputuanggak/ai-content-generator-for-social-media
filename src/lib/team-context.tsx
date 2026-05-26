@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 interface TeamData {
   userName: string;
+  userEmail: string;
   userId: string;
   teamName: string | null;
   teamId: string | null;
@@ -52,6 +53,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const value: TeamContextValue = sessionData?.session
     ? {
         userName: sessionData.userName ?? "",
+        userEmail: sessionData.session?.user?.email ?? "",
         userId: sessionData.session?.user?.id ?? "",
         teamName: teamData?.name ?? sessionData.teamName ?? null,
         teamId: teamData?.id ?? sessionData.teamId ?? null,
@@ -65,6 +67,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       }
     : {
         userName: "",
+        userEmail: "",
         userId: "",
         teamName: null,
         teamId: null,

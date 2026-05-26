@@ -184,7 +184,7 @@ function HistoryContent() {
             {generations.map((gen) => (
               <div
                 key={gen.id}
-                className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm transition hover:border-amber-200 hover:shadow-md"
+                className="group flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm transition hover:border-primary hover:shadow-md"
               >
                 <Link href={`/${slug}/history/${gen.id}`} className="flex-1 min-w-0 group">
                   <p className="font-semibold text-zinc-900 group-hover:underline truncate text-base">
@@ -213,6 +213,7 @@ function HistoryContent() {
                 <Button
                   variant="destructive"
                   size="xs"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={() => setDeleteId(gen.id)}
                 >
                   Delete
