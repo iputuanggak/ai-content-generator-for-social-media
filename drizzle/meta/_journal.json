@@ -43,6 +43,13 @@
       "when": 1779716495317,
       "tag": "0005_glorious_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779717000000,
+      "tag": "0006_rename_active_to_default_platforms",
+      "breakpoints": true
     }
   ]
 }

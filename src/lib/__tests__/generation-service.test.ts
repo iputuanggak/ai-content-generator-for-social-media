@@ -33,7 +33,7 @@ const defaultBrandSettings = {
   organizationId: "org-1",
   brandVoice: "bold and direct",
   defaultTone: "professional",
-  activePlatforms: ["twitter", "linkedin"],
+  defaultPlatforms: ["twitter", "linkedin"],
   modelId: "google/gemini-2.5-flash",
   updatedAt: new Date(),
 };

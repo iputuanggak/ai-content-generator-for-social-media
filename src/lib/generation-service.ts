@@ -60,7 +60,7 @@ export async function generateContent(
   }
 
   const brandSetting = settings[0];
-  const activePlatforms = brandSetting.activePlatforms as Platform[];
+  const defaultPlatforms = brandSetting.defaultPlatforms as Platform[];
   const modelId = brandSetting.modelId;
   const brandVoice = brandSetting.brandVoice;
 
@@ -80,7 +80,7 @@ export async function generateContent(
   const platformOutputResults: PlatformOutputResult[] = [];
 
   await Promise.all(
-    activePlatforms.map(async (platform) => {
+    defaultPlatforms.map(async (platform) => {
       const { systemPrompt, userPrompt } = buildPrompts(
         input.topic,
         input.tone,

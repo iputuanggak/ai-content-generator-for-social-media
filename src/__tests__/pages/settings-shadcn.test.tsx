@@ -43,7 +43,7 @@ global.fetch = mockFetch;
 const brandSettingsResponse = {
   brandVoice: "Bold and friendly",
   defaultTone: "professional",
-  activePlatforms: ["twitter", "linkedin"],
+  defaultPlatforms: ["twitter", "linkedin"],
   modelId: "google/gemini-2.5-flash",
   isAdmin: true,
 };
@@ -193,7 +193,7 @@ describe("SettingsPage CSR", () => {
     const body = JSON.parse(options.body);
     expect(body.brandVoice).toBe("Bold and friendly");
     expect(body.defaultTone).toBe("professional");
-    expect(body.activePlatforms).toEqual(["twitter", "linkedin"]);
+    expect(body.defaultPlatforms).toEqual(["twitter", "linkedin"]);
     expect(body.modelId).toBe("google/gemini-2.5-flash");
   });
 

@@ -22,7 +22,7 @@ import { usePlatformOutputActions } from "@/lib/use-platform-output-actions";
 
 interface BrandSettingsData {
   defaultTone: Tone;
-  activePlatforms: Platform[];
+  defaultPlatforms: Platform[];
 }
 
 const DEFAULT_TONE: Tone = "professional";
@@ -55,7 +55,7 @@ function DashboardContent() {
 
   const [brandSettingsLoaded, setBrandSettingsLoaded] = useState(false);
   const [defaultTone, setDefaultTone] = useState<Tone>(DEFAULT_TONE);
-  const [activePlatforms, setActivePlatforms] = useState<Platform[]>(DEFAULT_PLATFORMS);
+  const [defaultPlatforms, setDefaultPlatforms] = useState<Platform[]>(DEFAULT_PLATFORMS);
 
   const [topic, setTopic] = useState("");
   const toneDetermined = useRef(false);
@@ -99,7 +99,7 @@ function DashboardContent() {
       .then((data: BrandSettingsData) => {
         if (cancelled) return;
         setDefaultTone(data.defaultTone ?? DEFAULT_TONE);
-        setActivePlatforms(data.activePlatforms ?? DEFAULT_PLATFORMS);
+        setDefaultPlatforms(data.defaultPlatforms ?? DEFAULT_PLATFORMS);
       })
       .catch(() => {
         if (cancelled) return;
@@ -122,7 +122,7 @@ function DashboardContent() {
     setInsufficientCredits(null);
     setCurrentGenerationId(null);
     setIntendedPublishAt(undefined);
-    setLoadingPlatforms(new Set(activePlatforms));
+    setLoadingPlatforms(new Set(defaultPlatforms));
 
     try {
       const response = await fetch(`/api/${slug}/generations`, {
@@ -317,7 +317,7 @@ function DashboardContent() {
                       {isGenerating ? "Generating…" : "Generate"}
                     </Button>
                     <span className="text-sm text-zinc-500">
-                      This will cost {activePlatforms.length} credit{activePlatforms.length !== 1 ? "s" : ""}
+                      This will cost {defaultPlatforms.length} credit{defaultPlatforms.length !== 1 ? "s" : ""}
                     </span>
                   </div>
                 </form>
@@ -350,7 +350,7 @@ function DashboardContent() {
                 </div>
 
                 <div className="grid gap-5 sm:grid-cols-2">
-                  {activePlatforms.map((platform) => {
+                  {defaultPlatforms.map((platform) => {
                     const oid = platformToOutputId[platform];
                     const output = oid ? outputStates[oid] : undefined;
                     const isLoading = loadingPlatforms.has(platform) || (output ? output.isRegenerating : false);

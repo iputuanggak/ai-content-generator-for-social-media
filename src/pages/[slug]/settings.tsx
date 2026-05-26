@@ -31,7 +31,7 @@ function SettingsContent() {
 
   const [brandVoice, setBrandVoice] = useState("");
   const [defaultTone, setDefaultTone] = useState<Tone>("professional");
-  const [activePlatforms, setActivePlatforms] = useState<Platform[]>([]);
+  const [defaultPlatforms, setDefaultPlatforms] = useState<Platform[]>([]);
   const [modelId, setModelId] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +50,7 @@ function SettingsContent() {
         if (cancelled) return;
         setBrandVoice((data.brandVoice as string) ?? "");
         setDefaultTone((data.defaultTone as Tone) ?? "professional");
-        setActivePlatforms((data.activePlatforms as Platform[]) ?? []);
+        setDefaultPlatforms((data.defaultPlatforms as Platform[]) ?? []);
         const savedModelId = (data.modelId as string) ?? "";
         setModelId(ALL_MODEL_IDS.has(savedModelId) ? savedModelId : DEFAULT_MODEL_ID);
         setIsAdmin((data.isAdmin as boolean) ?? false);
@@ -83,7 +83,7 @@ function SettingsContent() {
       const res = await fetch(`/api/teams/${slug}/brand-settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brandVoice, defaultTone, activePlatforms, modelId }),
+        body: JSON.stringify({ brandVoice, defaultTone, defaultPlatforms, modelId }),
       });
 
       if (res.ok) {
@@ -174,18 +174,18 @@ function SettingsContent() {
 
               <div>
                 <p className={["mb-2 block text-sm font-medium", isAdmin ? "text-stone-700" : "text-stone-500"].join(" ")}>
-                  Active Platforms
+                  Default Platforms
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {PLATFORM_OPTIONS.map(({ value, label }) => {
-                    const isActive = activePlatforms.includes(value);
+                    const isActive = defaultPlatforms.includes(value);
                     return (
                       <Toggle
                         key={value}
                         pressed={isActive}
                         onPressedChange={() => {
                           if (!isAdmin) return;
-                          setActivePlatforms((prev) =>
+                          setDefaultPlatforms((prev) =>
                             prev.includes(value)
                               ? prev.filter((p) => p !== value)
                               : [...prev, value]

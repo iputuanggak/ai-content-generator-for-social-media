@@ -9,7 +9,7 @@ A fullstack web application that allows **marketing teams** to generate platform
 ## Glossary
 
 ### Team
-An organization unit in the system. Users belong to a Team. A Team has shared brand settings (brand voice, default tone, active platforms) that influence every content generation. Managed via Better Auth's organization plugin.
+An organization unit in the system. Users belong to a Team. A Team has shared brand settings (brand voice, default tone, default platforms) that influence every content generation. Managed via Better Auth's organization plugin.
 
 ### Member
 A user who belongs to a Team. Members share the Team's generation history and brand settings.
@@ -18,13 +18,13 @@ A user who belongs to a Team. Members share the Team's generation history and br
 Team-level configuration that is injected into every generation prompt. Consists of:
 - **Brand Voice** — a text description of the team's tone and personality
 - **Default Tone** — the pre-selected tone applied unless overridden per generation
-- **Active Platforms** — which social media platforms are enabled for this team
+- **Default Platforms** — which social media platforms are pre-selected for this team
 
 ### Generation
 A single content generation event. A Generation record contains:
 - **Input** — the topic and tone provided by the user
 - **Intended Publish Date** — the date/time the team plans to publish (informational only, no API publishing)
-- **Platform Outputs** — one generated post per active platform, adapted for that platform's constraints
+- **Platform Outputs** — one generated post per default platform, adapted for that platform's constraints
 - **User Edits** — edits made by the user to any platform output after generation
 
 ### Platform Output
@@ -33,8 +33,8 @@ A single generated post for one social media platform within a Generation. Adapt
 ### Tone
 A user-selectable style modifier applied to content generation. Options: Professional, Casual, Humorous, Inspirational.
 
-### Active Platforms
-The subset of supported platforms enabled for a Team. Only Active Platforms appear in generation results.
+### Default Platforms
+The subset of supported platforms pre-selected for a Team. Default Platforms are used as a convenience pre-fill on the generate page — any supported platform can still be generated for.
 
 ### Supported Platforms
 The full set of social media platforms the system can generate content for:

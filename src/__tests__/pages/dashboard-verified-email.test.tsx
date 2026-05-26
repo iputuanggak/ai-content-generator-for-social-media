@@ -87,7 +87,7 @@ const mockFetch = vi.fn(() =>
     json: () =>
       Promise.resolve({
         defaultTone: "professional",
-        activePlatforms: ["twitter"],
+        defaultPlatforms: ["twitter"],
       }),
   })
 );

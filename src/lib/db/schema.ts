@@ -128,7 +128,7 @@ export const brandSettings = pgTable("brand_settings", {
     .references(() => organization.id, { onDelete: "cascade" }),
   brandVoice: text("brand_voice").notNull().default(""),
   defaultTone: toneEnum("default_tone").notNull().default("professional"),
-  activePlatforms: text("active_platforms")
+  defaultPlatforms: text("default_platforms")
     .array()
     .notNull()
     .default([

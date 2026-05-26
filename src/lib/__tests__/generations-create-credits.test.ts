@@ -9,7 +9,7 @@ interface MockSession {
 }
 
 interface MockBrandSettings {
-  activePlatforms: string[];
+  defaultPlatforms: string[];
 }
 
 interface CreditCheckResult {
@@ -53,7 +53,7 @@ async function handleCreateGeneration({
   const settings = await findBrandSettings(activeOrgId);
   if (!settings) return { status: 500, body: { error: "Brand settings not found" } };
 
-  const platformCount = settings.activePlatforms.length;
+  const platformCount = settings.defaultPlatforms.length;
 
   const creditCheck = await checkCredits(activeOrgId, platformCount);
   if (!creditCheck.sufficient) {
@@ -92,7 +92,7 @@ describe("POST /api/generations credit integration", () => {
       topic: "AI trends",
       tone: "professional",
       session: authedSession,
-      findBrandSettings: async () => ({ activePlatforms: ["twitter", "linkedin", "instagram"] }),
+      findBrandSettings: async () => ({ defaultPlatforms: ["twitter", "linkedin", "instagram"] }),
       checkCredits: async () => ({ sufficient: false, available: 1, required: 3 }),
       generateContent: async () => {},
       deductCredits: async () => {},
@@ -112,7 +112,7 @@ describe("POST /api/generations credit integration", () => {
       topic: "AI trends",
       tone: "professional",
       session: authedSession,
-      findBrandSettings: async () => ({ activePlatforms: ["twitter", "linkedin"] }),
+      findBrandSettings: async () => ({ defaultPlatforms: ["twitter", "linkedin"] }),
       checkCredits: async (orgId, amount) => {
         checkCalls.push({ orgId, amount });
         return { sufficient: true, available: 25, required: amount };
@@ -132,7 +132,7 @@ describe("POST /api/generations credit integration", () => {
       topic: "AI trends",
       tone: "professional",
       session: authedSession,
-      findBrandSettings: async () => ({ activePlatforms: ["twitter", "linkedin"] }),
+      findBrandSettings: async () => ({ defaultPlatforms: ["twitter", "linkedin"] }),
       checkCredits: async () => ({ sufficient: true, available: 25, required: 2 }),
       generateContent: async ({ onPlatformOutput }) => {
         await onPlatformOutput({ platformOutputId: "po-1", generationId: "gen-1" });
@@ -154,7 +154,7 @@ describe("POST /api/generations credit integration", () => {
       topic: "AI trends",
       tone: "professional",
       session: authedSession,
-      findBrandSettings: async () => ({ activePlatforms: ["twitter", "linkedin", "instagram"] }),
+      findBrandSettings: async () => ({ defaultPlatforms: ["twitter", "linkedin", "instagram"] }),
       checkCredits: async () => ({ sufficient: true, available: 25, required: 3 }),
       generateContent: async ({ onPlatformOutput }) => {
         await onPlatformOutput({ platformOutputId: "po-1", generationId: "gen-1" });
@@ -177,7 +177,7 @@ describe("POST /api/generations credit integration", () => {
       topic: "AI trends",
       tone: "professional",
       session: authedSession,
-      findBrandSettings: async () => ({ activePlatforms: ["twitter"] }),
+      findBrandSettings: async () => ({ defaultPlatforms: ["twitter"] }),
       checkCredits: async () => ({ sufficient: false, available: 0, required: 1 }),
       generateContent: async () => {},
       deductCredits: async (_orgId, _amount, _type, refId) => {
@@ -193,7 +193,7 @@ describe("POST /api/generations credit integration", () => {
       topic: undefined,
       tone: "professional",
       session: authedSession,
-      findBrandSettings: async () => ({ activePlatforms: ["twitter"] }),
+      findBrandSettings: async () => ({ defaultPlatforms: ["twitter"] }),
       checkCredits: async () => ({ sufficient: true, available: 25, required: 1 }),
       generateContent: async () => {},
       deductCredits: async () => {},

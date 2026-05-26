@@ -93,9 +93,9 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   if (settingsRows.length === 0) {
     return res.status(500).json({ error: "Brand settings not found" });
   }
+  const defaultPlatforms = settingsRows[0].defaultPlatforms as string[];
 
-  const activePlatforms = settingsRows[0].activePlatforms as string[];
-  const platformCount = activePlatforms.length;
+  const platformCount = defaultPlatforms.length;
 
   initSSE(res);
 

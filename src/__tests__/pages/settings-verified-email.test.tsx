@@ -112,7 +112,7 @@ describe("SettingsPage email verification redirect", () => {
         Promise.resolve({
           brandVoice: "",
           defaultTone: "professional",
-          activePlatforms: [],
+          defaultPlatforms: [],
           modelId: "",
           isAdmin: true,
         }),

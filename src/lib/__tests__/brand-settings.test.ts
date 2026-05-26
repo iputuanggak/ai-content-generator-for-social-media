@@ -18,7 +18,7 @@ interface MockBrandSettings {
   organizationId: string;
   brandVoice: string;
   defaultTone: string;
-  activePlatforms: string[];
+  defaultPlatforms: string[];
   modelId: string;
   updatedAt: Date;
 }
@@ -77,8 +77,8 @@ async function handlePutBrandSettings({
 
   // Validate platforms if provided
   const validPlatforms = ["twitter", "linkedin", "instagram", "facebook", "tiktok", "youtube", "threads", "pinterest"];
-  if (updates.activePlatforms) {
-    for (const p of updates.activePlatforms) {
+  if (updates.defaultPlatforms) {
+    for (const p of updates.defaultPlatforms) {
       if (!validPlatforms.includes(p)) {
         return { status: 400, body: { error: `Invalid platform: ${p}` } };
       }
@@ -108,7 +108,7 @@ const sampleSettings: MockBrandSettings = {
   organizationId: "org-1",
   brandVoice: "bold and direct",
   defaultTone: "professional",
-  activePlatforms: ["twitter", "linkedin"],
+  defaultPlatforms: ["twitter", "linkedin"],
   modelId: "google/gemini-2.5-flash",
   updatedAt: new Date(),
 };
@@ -231,7 +231,7 @@ describe("PUT /api/teams/[id]/brand-settings", () => {
     const result = await handlePutBrandSettings({
       teamId: "org-1",
       session: adminSession,
-      body: { activePlatforms: ["twitter", "myspace"] },
+      body: { defaultPlatforms: ["twitter", "myspace"] },
       getMember: async () => adminMember,
       updateBrandSettings: async () => sampleSettings,
     });

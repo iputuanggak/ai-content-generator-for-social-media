@@ -56,7 +56,7 @@ export const auth = betterAuth({
               organizationId: org.id,
               brandVoice: "",
               defaultTone: "professional",
-              activePlatforms: [
+              defaultPlatforms: [
                 "twitter",
                 "linkedin",
                 "instagram",

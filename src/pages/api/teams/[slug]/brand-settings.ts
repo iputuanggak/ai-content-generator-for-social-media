@@ -44,10 +44,10 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await withAdminSlugSession(req, res);
   if (!ctx) return;
 
-  const { brandVoice, defaultTone, activePlatforms, modelId } = req.body as {
+  const { brandVoice, defaultTone, defaultPlatforms, modelId } = req.body as {
     brandVoice?: string;
     defaultTone?: string;
-    activePlatforms?: string[];
+    defaultPlatforms?: string[];
     modelId?: string;
   };
 
@@ -55,8 +55,8 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: "Invalid tone" });
   }
 
-  if (activePlatforms !== undefined) {
-    for (const p of activePlatforms) {
+  if (defaultPlatforms !== undefined) {
+    for (const p of defaultPlatforms) {
       if (!VALID_PLATFORMS.includes(p as Platform)) {
         return res.status(400).json({ error: `Invalid platform: ${p}` });
       }
@@ -75,7 +75,7 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse) {
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (brandVoice !== undefined) updates.brandVoice = brandVoice;
   if (defaultTone !== undefined) updates.defaultTone = defaultTone as Tone;
-  if (activePlatforms !== undefined) updates.activePlatforms = activePlatforms as Platform[];
+  if (defaultPlatforms !== undefined) updates.defaultPlatforms = defaultPlatforms as Platform[];
   if (modelId !== undefined) updates.modelId = modelId;
 
   await db
