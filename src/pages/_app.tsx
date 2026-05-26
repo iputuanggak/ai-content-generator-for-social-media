@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import Head from "next/head";
 import { useEffect, useState } from "react";
+import { RouteProgress } from "@/components/route-progress";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
@@ -67,6 +68,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <div className={`${dmSerifDisplay.variable} ${plusJakartaSans.variable}`}>
+      <RouteProgress />
       <Head>
         <title>{APP_TITLE}</title>
         <meta name="description" content={APP_DESCRIPTION} />
