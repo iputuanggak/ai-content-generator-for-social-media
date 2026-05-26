@@ -12,8 +12,8 @@ vi.mock("@/components/layout/DashboardLayout", () => ({
 }));
 
 vi.mock("@/components/confirm-dialog", () => ({
-  ConfirmDialog: ({ open, onConfirm, confirmLabel }: { open: boolean; onConfirm: () => void; confirmLabel: string }) =>
-    open ? <button data-testid="confirm-btn" onClick={onConfirm}>{confirmLabel}</button> : null,
+  ConfirmDialog: ({ open, onConfirm, confirmLabel, title }: { open: boolean; onConfirm: () => void; confirmLabel: string; title: string }) =>
+    open ? <button data-testid={`confirm-btn-${title}`} onClick={onConfirm}>{confirmLabel}</button> : null,
 }));
 
 vi.mock("sonner", () => ({
@@ -275,7 +275,7 @@ describe("MembersPage CSR", () => {
     expect(paragraphs).toHaveLength(1);
   });
 
-  it("shows no action buttons on pending invitation rows", async () => {
+  it("shows cancel button on pending invitation rows for admins", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(membersResponse),
@@ -286,8 +286,22 @@ describe("MembersPage CSR", () => {
       expect(screen.getByText("pending@example.com")).toBeInTheDocument();
     });
 
-    const allRemoveButtons = screen.queryAllByRole("button", { name: /remove/i });
-    expect(allRemoveButtons).toHaveLength(1);
+    const cancelButtons = screen.getAllByRole("button", { name: /^cancel$/i });
+    expect(cancelButtons).toHaveLength(1);
+  });
+
+  it("hides cancel button on pending invitation rows for non-admins", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ ...membersResponse, isAdmin: false }),
+    });
+    render(<MembersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole("button", { name: /^cancel$/i })).not.toBeInTheDocument();
   });
 
   it("renders pending invitations for non-admin users", async () => {
@@ -300,6 +314,63 @@ describe("MembersPage CSR", () => {
     await waitFor(() => {
       expect(screen.getByText("pending@example.com")).toBeInTheDocument();
       expect(screen.getByText("Pending")).toBeInTheDocument();
+    });
+  });
+
+  it("opens cancel invitation confirm dialog when clicking cancel", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(membersResponse),
+    });
+    const user = userEvent.setup();
+    render(<MembersPage />);
+
+    const cancelButton = await screen.findByRole("button", { name: /^cancel$/i });
+    await user.click(cancelButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("confirm-btn-Cancel Invitation")).toBeInTheDocument();
+    });
+  });
+
+  it("shows invitee email in cancel confirmation dialog", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(membersResponse),
+    });
+    const user = userEvent.setup();
+    render(<MembersPage />);
+
+    const cancelButton = await screen.findByRole("button", { name: /^cancel$/i });
+    await user.click(cancelButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("confirm-btn-Cancel Invitation")).toBeInTheDocument();
+    });
+  });
+
+  it("calls DELETE endpoint when confirming cancel invitation", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(membersResponse),
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ success: true }),
+    });
+    const user = userEvent.setup();
+    render(<MembersPage />);
+
+    const cancelButton = await screen.findByRole("button", { name: /^cancel$/i });
+    await user.click(cancelButton);
+
+    const confirmBtn = await screen.findByTestId("confirm-btn-Cancel Invitation");
+    await user.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const [url, options] = mockFetch.mock.calls[1];
+      expect(url).toBe("/api/teams/acme/invitations/inv-1");
+      expect(options.method).toBe("DELETE");
     });
   });
 });

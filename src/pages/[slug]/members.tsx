@@ -53,6 +53,8 @@ function MembersContent() {
   const [isInviting, setIsInviting] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [confirmRemoveMember, setConfirmRemoveMember] = useState<MemberData | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [confirmCancelInvitation, setConfirmCancelInvitation] = useState<InvitationData | null>(null);
 
   useEffect(() => {
     if (!slug || teamLoading) return;
@@ -132,6 +134,28 @@ function MembersContent() {
       toast.error("Network error. Please try again.");
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function handleCancelInvitation(invId: string) {
+    setCancellingId(invId);
+    setConfirmCancelInvitation(null);
+
+    try {
+      const res = await fetch(`/api/teams/${slug}/invitations/${invId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setInvitations((prev) => prev.filter((inv) => inv.id !== invId));
+        toast.success("Invitation cancelled.");
+      } else {
+        toast.error("Failed to cancel invitation.");
+      }
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setCancellingId(null);
     }
   }
 
@@ -234,9 +258,21 @@ function MembersContent() {
                     <div>
                       <p className="text-sm font-medium text-stone-900">{inv.email}</p>
                     </div>
-                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-                      Pending
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                        Pending
+                      </span>
+                      {isAdmin && (
+                        <Button
+                          variant="destructive"
+                          size="xs"
+                          onClick={() => setConfirmCancelInvitation(inv)}
+                          disabled={cancellingId === inv.id}
+                        >
+                          {cancellingId === inv.id ? "Cancelling…" : "Cancel"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -260,6 +296,23 @@ function MembersContent() {
         onConfirm={() => confirmRemoveMember && handleRemove(confirmRemoveMember.id)}
         variant="destructive"
         confirmDisabled={!!removingId}
+      />
+
+      <ConfirmDialog
+        open={!!confirmCancelInvitation}
+        onOpenChange={(open) => { if (!open) setConfirmCancelInvitation(null); }}
+        title="Cancel Invitation"
+        description={
+          <>
+            Are you sure you want to cancel the invitation to{" "}
+            <span className="font-medium text-stone-900">{confirmCancelInvitation?.email}</span>?
+            The recipient will no longer be able to join the team.
+          </>
+        }
+        confirmLabel={cancellingId ? "Cancelling…" : "Cancel Invitation"}
+        onConfirm={() => confirmCancelInvitation && handleCancelInvitation(confirmCancelInvitation.id)}
+        variant="destructive"
+        confirmDisabled={!!cancellingId}
       />
     </>
   );
