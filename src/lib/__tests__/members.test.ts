@@ -507,3 +507,148 @@ describe("DELETE /api/teams/[id]/members/[memberId]", () => {
     expect(result.status).toBe(404);
   });
 });
+
+// ─── POST /api/teams/[id]/invitations/[invitationId]/resend ────────────────────
+
+async function handleResendInvitation({
+  orgId,
+  invitationId,
+  session,
+  getMember,
+  getInvitation,
+  cancelInvitation,
+  createInvitation,
+}: {
+  orgId: string;
+  invitationId: string;
+  session: MockSession | null;
+  getMember: (orgId: string, userId: string) => Promise<MockMember | null>;
+  getInvitation: (invitationId: string) => Promise<MockInvitation | null>;
+  cancelInvitation: (invitationId: string) => Promise<void>;
+  createInvitation: (orgId: string, email: string, role: string) => Promise<MockInvitation>;
+}): Promise<{ status: number; body: unknown }> {
+  if (!session) return { status: 401, body: { error: "Unauthorized" } };
+
+  const currentMember = await getMember(orgId, session.user.id);
+  if (!currentMember) return { status: 403, body: { error: "Forbidden" } };
+
+  if (currentMember.role !== "owner" && currentMember.role !== "admin") {
+    return { status: 403, body: { error: "Admin access required" } };
+  }
+
+  const inv = await getInvitation(invitationId);
+  if (!inv || inv.organizationId !== orgId) {
+    return { status: 404, body: { error: "Invitation not found" } };
+  }
+
+  await cancelInvitation(invitationId);
+
+  const newInvitation = await createInvitation(orgId, inv.email, inv.role ?? "member");
+
+  return { status: 200, body: { invitation: newInvitation } };
+}
+
+describe("POST /api/teams/[id]/invitations/[invitationId]/resend", () => {
+  const resendTimeInv: MockInvitation = {
+    id: "inv-1",
+    organizationId: "org-1",
+    email: "resend@example.com",
+    role: "member",
+    status: "pending",
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    inviterId: "user-1",
+  };
+
+  const otherOrgInv: MockInvitation = {
+    id: "inv-2",
+    organizationId: "org-2",
+    email: "other@example.com",
+    role: "member",
+    status: "pending",
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    inviterId: "user-3",
+  };
+
+  const newInvitation: MockInvitation = {
+    id: "inv-new",
+    organizationId: "org-1",
+    email: "resend@example.com",
+    role: "member",
+    status: "pending",
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    inviterId: "user-1",
+  };
+
+  it("returns 401 when unauthenticated", async () => {
+    const result = await handleResendInvitation({
+      orgId: "org-1",
+      invitationId: "inv-1",
+      session: null,
+      getMember: async () => adminMember,
+      getInvitation: async () => resendTimeInv,
+      cancelInvitation: async () => {},
+      createInvitation: async () => newInvitation,
+    });
+    expect(result.status).toBe(401);
+  });
+
+  it("returns 403 when non-admin tries to resend", async () => {
+    const result = await handleResendInvitation({
+      orgId: "org-1",
+      invitationId: "inv-1",
+      session: memberSession,
+      getMember: async () => nonAdminMember,
+      getInvitation: async () => resendTimeInv,
+      cancelInvitation: async () => {},
+      createInvitation: async () => newInvitation,
+    });
+    expect(result.status).toBe(403);
+  });
+
+  it("returns 404 when invitation does not exist", async () => {
+    const result = await handleResendInvitation({
+      orgId: "org-1",
+      invitationId: "nonexistent",
+      session: adminSession,
+      getMember: async () => adminMember,
+      getInvitation: async () => null,
+      cancelInvitation: async () => {},
+      createInvitation: async () => newInvitation,
+    });
+    expect(result.status).toBe(404);
+  });
+
+  it("returns 404 when invitation belongs to different org", async () => {
+    const result = await handleResendInvitation({
+      orgId: "org-1",
+      invitationId: "inv-2",
+      session: adminSession,
+      getMember: async () => adminMember,
+      getInvitation: async () => otherOrgInv,
+      cancelInvitation: async () => {},
+      createInvitation: async () => newInvitation,
+    });
+    expect(result.status).toBe(404);
+  });
+
+  it("cancels old invitation and creates new one on success", async () => {
+    const cancelled: string[] = [];
+    const created: { orgId: string; email: string; role: string }[] = [];
+    const result = await handleResendInvitation({
+      orgId: "org-1",
+      invitationId: "inv-1",
+      session: adminSession,
+      getMember: async () => adminMember,
+      getInvitation: async () => resendTimeInv,
+      cancelInvitation: async (id) => { cancelled.push(id); },
+      createInvitation: async (orgId, email, role) => {
+        created.push({ orgId, email, role });
+        return newInvitation;
+      },
+    });
+    expect(result.status).toBe(200);
+    expect(cancelled).toEqual(["inv-1"]);
+    expect(created).toEqual([{ orgId: "org-1", email: "resend@example.com", role: "member" }]);
+    expect((result.body as { invitation: MockInvitation }).invitation.id).toBe("inv-new");
+  });
+});

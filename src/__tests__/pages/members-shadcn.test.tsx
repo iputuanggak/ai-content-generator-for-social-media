@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 
@@ -372,5 +372,92 @@ describe("MembersPage CSR", () => {
       expect(url).toBe("/api/teams/acme/invitations/inv-1");
       expect(options.method).toBe("DELETE");
     });
+  });
+
+  it("shows resend button on pending invitation rows for admins", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(membersResponse),
+    });
+    render(<MembersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+    });
+
+    const resendButtons = screen.getAllByRole("button", { name: /^resend$/i });
+    expect(resendButtons).toHaveLength(1);
+  });
+
+  it("hides resend button on pending invitation rows for non-admins", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ ...membersResponse, isAdmin: false }),
+    });
+    render(<MembersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole("button", { name: /^resend/i })).not.toBeInTheDocument();
+  });
+
+  it("calls POST resend endpoint when clicking resend", async () => {
+    const newInvitation = {
+      id: "inv-new",
+      email: "pending@example.com",
+      role: "member",
+      status: "pending",
+      expiresAt: "2025-06-08T00:00:00Z",
+      createdAt: "2025-05-25T00:00:00Z",
+    };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(membersResponse),
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ invitation: newInvitation }),
+    });
+    const user = userEvent.setup();
+    render(<MembersPage />);
+
+    const resendButton = await screen.findByRole("button", { name: /^resend$/i });
+    await user.click(resendButton);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const [url, options] = mockFetch.mock.calls[1];
+      expect(url).toBe("/api/teams/acme/invitations/inv-1/resend");
+      expect(options.method).toBe("POST");
+    });
+  });
+
+  it("shows cooldown state after successful resend", async () => {
+    const newInvitation = {
+      id: "inv-new",
+      email: "pending@example.com",
+      role: "member",
+      status: "pending",
+      expiresAt: "2025-06-08T00:00:00Z",
+      createdAt: "2025-05-25T00:00:00Z",
+    };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(membersResponse),
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ invitation: newInvitation }),
+    });
+    render(<MembersPage />);
+
+    const resendButton = await screen.findByRole("button", { name: /^resend$/i });
+    fireEvent.click(resendButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /resend \(\d+s\)/i })).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: /resend \(\d+s\)/i })).toBeDisabled();
   });
 });

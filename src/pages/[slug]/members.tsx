@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -55,6 +55,40 @@ function MembersContent() {
   const [confirmRemoveMember, setConfirmRemoveMember] = useState<MemberData | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [confirmCancelInvitation, setConfirmCancelInvitation] = useState<InvitationData | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [resendCooldowns, setResendCooldowns] = useState<Map<string, number>>(new Map());
+  const cooldownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const tickCooldowns = useCallback(() => {
+    setResendCooldowns((prev) => {
+      const next = new Map<string, number>();
+      for (const [id, secs] of prev) {
+        if (secs > 1) next.set(id, secs - 1);
+      }
+      if (next.size === 0 && cooldownIntervalRef.current) {
+        clearInterval(cooldownIntervalRef.current);
+        cooldownIntervalRef.current = null;
+      }
+      return next;
+    });
+  }, []);
+
+  const startCooldown = useCallback((invitationId: string) => {
+    setResendCooldowns((prev) => {
+      const next = new Map(prev);
+      next.set(invitationId, 60);
+      return next;
+    });
+    if (!cooldownIntervalRef.current) {
+      cooldownIntervalRef.current = setInterval(tickCooldowns, 1000);
+    }
+  }, [tickCooldowns]);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!slug || teamLoading) return;
@@ -159,6 +193,31 @@ function MembersContent() {
     }
   }
 
+  async function handleResendInvitation(inv: InvitationData) {
+    setResendingId(inv.id);
+
+    try {
+      const res = await fetch(`/api/teams/${slug}/invitations/${inv.id}/resend`, {
+        method: "POST",
+      });
+
+      const data = await res.json() as { invitation?: InvitationData; error?: string };
+
+      if (res.ok) {
+        const newInv = data.invitation!;
+        setInvitations((prev) => prev.map((i) => (i.id === inv.id ? newInv : i)));
+        startCooldown(newInv.id);
+        toast.success("Invitation resent.");
+      } else {
+        toast.error(data.error ?? "Failed to resend invitation.");
+      }
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setResendingId(null);
+    }
+  }
+
   const ROLE_LABELS: Record<string, string> = {
     owner: "Owner",
     admin: "Admin",
@@ -253,28 +312,46 @@ function MembersContent() {
                     </div>
                   </div>
                 ))}
-                {invitations.map((inv) => (
-                  <div key={inv.id} className="flex items-center justify-between px-6 py-4">
-                    <div>
-                      <p className="text-sm font-medium text-stone-900">{inv.email}</p>
+                {invitations.map((inv) => {
+                  const cooldownRemaining = resendCooldowns.get(inv.id) ?? 0;
+                  const inCooldown = cooldownRemaining > 0;
+
+                  return (
+                    <div key={inv.id} className="flex items-center justify-between px-6 py-4">
+                      <div>
+                        <p className="text-sm font-medium text-stone-900">{inv.email}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                          Pending
+                        </span>
+                        {isAdmin && (
+                          <>
+                            <Button
+                              size="xs"
+                              onClick={() => handleResendInvitation(inv)}
+                              disabled={resendingId === inv.id || inCooldown}
+                            >
+                              {resendingId === inv.id
+                                ? "Resending…"
+                                : inCooldown
+                                ? `Resend (${cooldownRemaining}s)`
+                                : "Resend"}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="xs"
+                              onClick={() => setConfirmCancelInvitation(inv)}
+                              disabled={cancellingId === inv.id}
+                            >
+                              {cancellingId === inv.id ? "Cancelling…" : "Cancel"}
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-                        Pending
-                      </span>
-                      {isAdmin && (
-                        <Button
-                          variant="destructive"
-                          size="xs"
-                          onClick={() => setConfirmCancelInvitation(inv)}
-                          disabled={cancellingId === inv.id}
-                        >
-                          {cancellingId === inv.id ? "Cancelling…" : "Cancel"}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           </>
