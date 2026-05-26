@@ -242,5 +242,108 @@ describe("Sidebar", () => {
 
       expect(authClient.organization.setActive).not.toHaveBeenCalled();
     });
+
+    it("shows Create new team option in dropdown for multi-team users", async () => {
+      const user = userEvent.setup();
+
+      routerState.asPath = "/alpha";
+      routerState.query = { slug: "alpha" };
+
+      mockFetchMultiTeam();
+
+      render(
+        wrap(
+          <TeamProvider>
+            <Sidebar />
+          </TeamProvider>
+        )
+      );
+
+      const trigger = await screen.findByRole("button", { name: /Team Alpha/ });
+      await user.click(trigger);
+
+      const menu = await screen.findByRole("menu");
+      expect(within(menu).getByText("Create new team")).toBeInTheDocument();
+      expect(within(menu).getByRole("separator")).toBeInTheDocument();
+    });
+
+    it("navigates to /create-team when Create new team is clicked", async () => {
+      const user = userEvent.setup();
+
+      routerState.asPath = "/alpha";
+      routerState.query = { slug: "alpha" };
+
+      mockFetchMultiTeam();
+
+      render(
+        wrap(
+          <TeamProvider>
+            <Sidebar />
+          </TeamProvider>
+        )
+      );
+
+      const trigger = await screen.findByRole("button", { name: /Team Alpha/ });
+      await user.click(trigger);
+
+      const menu = await screen.findByRole("menu");
+      const createItem = within(menu).getByText("Create new team");
+      await user.click(createItem);
+
+      expect(routerState.push).toHaveBeenCalledWith("/create-team");
+    });
+  });
+
+  describe("single team user", () => {
+    it("shows dropdown with Create new team option when user has exactly 1 team", async () => {
+      const user = userEvent.setup();
+
+      routerState.asPath = "/acme";
+      routerState.query = { slug: "acme" };
+
+      mockFetch();
+
+      render(
+        wrap(
+          <TeamProvider>
+            <Sidebar />
+          </TeamProvider>
+        )
+      );
+
+      const trigger = await screen.findByRole("button", { name: /Test Team/ });
+      await user.click(trigger);
+
+      const menu = await screen.findByRole("menu");
+      expect(within(menu).getByText("Test Team")).toBeInTheDocument();
+      expect(within(menu).getByText("Create new team")).toBeInTheDocument();
+      expect(within(menu).getByRole("separator")).toBeInTheDocument();
+    });
+
+    it("navigates to /create-team from single-team dropdown", async () => {
+      const user = userEvent.setup();
+
+      routerState.asPath = "/acme";
+      routerState.query = { slug: "acme" };
+
+      mockFetch();
+
+      render(
+        wrap(
+          <TeamProvider>
+            <Sidebar />
+          </TeamProvider>
+        )
+      );
+
+      const trigger = await screen.findByRole("button", { name: /Test Team/ });
+      await user.click(trigger);
+
+      const menu = await screen.findByRole("menu");
+      const createItem = within(menu).getByText("Create new team");
+      await user.click(createItem);
+
+      expect(routerState.push).toHaveBeenCalledWith("/create-team");
+    });
   });
 });

@@ -8,8 +8,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { PlusSignIcon } from "@hugeicons/core-free-icons";
 
 interface SidebarProps {
   onNavigate?: () => void;
@@ -53,7 +56,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       </div>
 
       <div className="px-5 py-4 border-b border-zinc-100">
-        {teamName && teams.length > 1 ? (
+        {teamName && teams.length >= 1 ? (
           <DropdownMenu>
             <DropdownMenuTrigger className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 outline-none">
               <span className="truncate">{teamName}</span>
@@ -81,6 +84,14 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                   {t.name}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => router.push("/create-team")}
+                className="text-zinc-500"
+              >
+                <HugeiconsIcon icon={PlusSignIcon} size={16} />
+                Create new team
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : teamName ? (
