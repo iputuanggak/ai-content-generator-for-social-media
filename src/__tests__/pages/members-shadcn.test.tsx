@@ -30,7 +30,7 @@ let teamContextValue = {
   userId: "user-1",
   teamName: "Test Team",
   teamId: "team-1" as string | null,
-  slug: "acme",
+  slug: "acme" as string | null,
   teams: [{ id: "team-1", name: "Test Team", slug: "acme" }],
   loading: false,
 };
@@ -61,6 +61,16 @@ const membersResponse = {
       role: "member",
       createdAt: "2025-01-02T00:00:00Z",
       user: { id: "user-2", name: "Regular Member", email: "member@example.com" },
+    },
+  ],
+  invitations: [
+    {
+      id: "inv-1",
+      email: "pending@example.com",
+      role: "member",
+      status: "pending",
+      expiresAt: "2025-06-01T00:00:00Z",
+      createdAt: "2025-05-25T00:00:00Z",
     },
   ],
   isAdmin: true,
@@ -220,7 +230,76 @@ describe("MembersPage CSR", () => {
   });
 
   it("has no getServerSideProps export", async () => {
-    const mod = await import("../[slug]/members");
+    const mod = await import("../../pages/[slug]/members");
     expect((mod as Record<string, unknown>).getServerSideProps).toBeUndefined();
+  });
+
+  it("renders pending invitations below active members", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(membersResponse),
+    });
+    render(<MembersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+    });
+  });
+
+  it("shows Pending badge for pending invitations", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(membersResponse),
+    });
+    render(<MembersPage />);
+
+    await waitFor(() => {
+      const pendingBadges = screen.getAllByText("Pending");
+      expect(pendingBadges.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it("shows email as primary text for pending invitations with no secondary line", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(membersResponse),
+    });
+    render(<MembersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+    });
+
+    const pendingRow = screen.getByText("pending@example.com").closest("div");
+    const paragraphs = pendingRow!.querySelectorAll("p");
+    expect(paragraphs).toHaveLength(1);
+  });
+
+  it("shows no action buttons on pending invitation rows", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(membersResponse),
+    });
+    render(<MembersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+    });
+
+    const allRemoveButtons = screen.queryAllByRole("button", { name: /remove/i });
+    expect(allRemoveButtons).toHaveLength(1);
+  });
+
+  it("renders pending invitations for non-admin users", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ ...membersResponse, isAdmin: false }),
+    });
+    render(<MembersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+      expect(screen.getByText("Pending")).toBeInTheDocument();
+    });
   });
 });

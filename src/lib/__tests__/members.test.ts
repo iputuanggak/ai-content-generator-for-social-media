@@ -37,16 +37,27 @@ interface MockInvitation {
 
 // ─── GET /api/teams/[id]/members ─────────────────────────────────────────────
 
+interface MockInvitationWithDates {
+  id: string;
+  email: string;
+  role: string | null;
+  status: string;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
 async function handleListMembers({
   teamId,
   session,
   getMember,
   listMembers,
+  listInvitations,
 }: {
   teamId: string;
   session: MockSession | null;
   getMember: (orgId: string, userId: string) => Promise<MockMember | null>;
   listMembers: (orgId: string) => Promise<MockMemberWithUser[]>;
+  listInvitations: (orgId: string) => Promise<MockInvitationWithDates[]>;
 }): Promise<{ status: number; body: unknown }> {
   if (!session) return { status: 401, body: { error: "Unauthorized" } };
 
@@ -54,8 +65,10 @@ async function handleListMembers({
   if (!currentMember) return { status: 403, body: { error: "Forbidden" } };
 
   const members = await listMembers(teamId);
+  const allInvitations = await listInvitations(teamId);
+  const invitations = allInvitations.filter((inv) => inv.status === "pending");
   const isAdmin = currentMember.role === "owner" || currentMember.role === "admin";
-  return { status: 200, body: { members, isAdmin } };
+  return { status: 200, body: { members, invitations, isAdmin } };
 }
 
 // ─── POST /api/teams/[id]/members (invite by email) ──────────────────────────
@@ -180,6 +193,31 @@ const sampleInvitation: MockInvitation = {
   inviterId: "user-1",
 };
 
+const samplePendingInvitation: MockInvitationWithDates = {
+  id: "inv-1",
+  email: "alice@example.com",
+  role: "member",
+  status: "pending",
+  expiresAt: new Date("2025-06-01T00:00:00Z"),
+  createdAt: new Date("2025-05-25T00:00:00Z"),
+};
+
+const sampleAcceptedInvitation: MockInvitationWithDates = {
+  id: "inv-2",
+  email: "bob@example.com",
+  role: "member",
+  status: "accepted",
+  expiresAt: new Date("2025-06-01T00:00:00Z"),
+  createdAt: new Date("2025-05-25T00:00:00Z"),
+};
+
+const emptyInvitations: () => Promise<MockInvitationWithDates[]> = async () => [];
+
+const mixedInvitations: MockInvitationWithDates[] = [
+  samplePendingInvitation,
+  sampleAcceptedInvitation,
+];
+
 // ─── Tests: List Members ───────────────────────────────────────────────────────
 
 describe("GET /api/teams/[id]/members", () => {
@@ -189,6 +227,7 @@ describe("GET /api/teams/[id]/members", () => {
       session: null,
       getMember: async () => adminMember,
       listMembers: async () => membersWithUsers,
+      listInvitations: emptyInvitations,
     });
     expect(result.status).toBe(401);
   });
@@ -199,6 +238,7 @@ describe("GET /api/teams/[id]/members", () => {
       session: adminSession,
       getMember: async () => null,
       listMembers: async () => membersWithUsers,
+      listInvitations: emptyInvitations,
     });
     expect(result.status).toBe(403);
   });
@@ -209,6 +249,7 @@ describe("GET /api/teams/[id]/members", () => {
       session: memberSession,
       getMember: async () => nonAdminMember,
       listMembers: async () => membersWithUsers,
+      listInvitations: emptyInvitations,
     });
     expect(result.status).toBe(200);
     expect((result.body as { members: MockMemberWithUser[] }).members).toHaveLength(2);
@@ -221,6 +262,7 @@ describe("GET /api/teams/[id]/members", () => {
       session: adminSession,
       getMember: async () => adminMember,
       listMembers: async () => membersWithUsers,
+      listInvitations: emptyInvitations,
     });
     expect(result.status).toBe(200);
     expect((result.body as { isAdmin: boolean }).isAdmin).toBe(true);
@@ -232,10 +274,71 @@ describe("GET /api/teams/[id]/members", () => {
       session: adminSession,
       getMember: async () => adminMember,
       listMembers: async () => membersWithUsers,
+      listInvitations: emptyInvitations,
     });
     expect(result.status).toBe(200);
     const members = (result.body as { members: MockMemberWithUser[] }).members;
     expect(members[0].user.name).toBe("Admin User");
+  });
+
+  it("returns invitations array with only pending invitations", async () => {
+    const result = await handleListMembers({
+      teamId: "org-1",
+      session: adminSession,
+      getMember: async () => adminMember,
+      listMembers: async () => membersWithUsers,
+      listInvitations: async () => mixedInvitations,
+    });
+    expect(result.status).toBe(200);
+    const body = result.body as { invitations: MockInvitationWithDates[] };
+    expect(body.invitations).toHaveLength(1);
+    expect(body.invitations[0].status).toBe("pending");
+    expect(body.invitations[0].email).toBe("alice@example.com");
+  });
+
+  it("returns empty invitations array when no pending invitations exist", async () => {
+    const result = await handleListMembers({
+      teamId: "org-1",
+      session: adminSession,
+      getMember: async () => adminMember,
+      listMembers: async () => membersWithUsers,
+      listInvitations: async () => [sampleAcceptedInvitation],
+    });
+    expect(result.status).toBe(200);
+    const body = result.body as { invitations: MockInvitationWithDates[] };
+    expect(body.invitations).toHaveLength(0);
+  });
+
+  it("returns invitations for non-admin members too", async () => {
+    const result = await handleListMembers({
+      teamId: "org-1",
+      session: memberSession,
+      getMember: async () => nonAdminMember,
+      listMembers: async () => membersWithUsers,
+      listInvitations: async () => mixedInvitations,
+    });
+    expect(result.status).toBe(200);
+    const body = result.body as { invitations: MockInvitationWithDates[]; isAdmin: boolean };
+    expect(body.invitations).toHaveLength(1);
+    expect(body.isAdmin).toBe(false);
+  });
+
+  it("includes id, email, role, status, expiresAt, createdAt in each invitation", async () => {
+    const result = await handleListMembers({
+      teamId: "org-1",
+      session: adminSession,
+      getMember: async () => adminMember,
+      listMembers: async () => membersWithUsers,
+      listInvitations: async () => [samplePendingInvitation],
+    });
+    expect(result.status).toBe(200);
+    const inv = (result.body as { invitations: MockInvitationWithDates[] }).invitations[0];
+    expect(inv).toHaveProperty("id");
+    expect(inv).toHaveProperty("email");
+    expect(inv).toHaveProperty("role");
+    expect(inv).toHaveProperty("status");
+    expect(inv).toHaveProperty("expiresAt");
+    expect(inv).toHaveProperty("createdAt");
   });
 });
 

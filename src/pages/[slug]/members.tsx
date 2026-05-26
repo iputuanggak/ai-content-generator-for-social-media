@@ -22,6 +22,15 @@ interface MemberData {
   };
 }
 
+interface InvitationData {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
 export default function MembersPage() {
   const { loading: verifyLoading } = useRequireVerifiedEmail();
   if (verifyLoading) return null;
@@ -37,6 +46,7 @@ function MembersContent() {
   const { teamId, userId, slug, loading: teamLoading } = useTeam();
 
   const [members, setMembers] = useState<MemberData[]>([]);
+  const [invitations, setInvitations] = useState<InvitationData[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -53,9 +63,10 @@ function MembersContent() {
         if (!res.ok) throw new Error("Failed");
         return res.json();
       })
-      .then((data: { members: MemberData[]; isAdmin: boolean }) => {
+      .then((data: { members: MemberData[]; invitations: InvitationData[]; isAdmin: boolean }) => {
         if (cancelled) return;
         setMembers(data.members);
+        setInvitations(data.invitations ?? []);
         setIsAdmin(data.isAdmin);
       })
       .catch(() => {
@@ -216,6 +227,16 @@ function MembersContent() {
                         </Button>
                       )}
                     </div>
+                  </div>
+                ))}
+                {invitations.map((inv) => (
+                  <div key={inv.id} className="flex items-center justify-between px-6 py-4">
+                    <div>
+                      <p className="text-sm font-medium text-stone-900">{inv.email}</p>
+                    </div>
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                      Pending
+                    </span>
                   </div>
                 ))}
               </div>

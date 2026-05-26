@@ -32,7 +32,29 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     .innerJoin(user, eq(member.userId, user.id))
     .where(eq(member.organizationId, ctx.orgId));
 
-  return res.status(200).json({ members: rows, isAdmin: isAdminRole(ctx.role) });
+  let invitations: unknown[] = [];
+  try {
+    const allInvitations = await auth.api.listInvitations({
+      headers: ctx.headers,
+      query: { organizationId: ctx.orgId },
+    });
+    if (Array.isArray(allInvitations)) {
+      invitations = allInvitations
+        .filter((inv: Record<string, unknown>) => inv.status === "pending")
+        .map((inv: Record<string, unknown>) => ({
+          id: inv.id,
+          email: inv.email,
+          role: inv.role,
+          status: inv.status,
+          expiresAt: inv.expiresAt,
+          createdAt: inv.createdAt,
+        }));
+    }
+  } catch {
+    // invitations are optional — do not block members list
+  }
+
+  return res.status(200).json({ members: rows, invitations, isAdmin: isAdminRole(ctx.role) });
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
