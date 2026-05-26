@@ -4,7 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useTeam } from "@/lib/team-context";
 import type { Tone, Platform } from "@/lib/content-adapter";
-import { PLATFORM_LABELS } from "@/lib/content-adapter";
+import { PLATFORM_LABELS, PLATFORM_OPTIONS } from "@/lib/content-adapter";
+import { Toggle } from "@/components/ui/toggle";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -55,7 +56,7 @@ function DashboardContent() {
 
   const [brandSettingsLoaded, setBrandSettingsLoaded] = useState(false);
   const [defaultTone, setDefaultTone] = useState<Tone>(DEFAULT_TONE);
-  const [defaultPlatforms, setDefaultPlatforms] = useState<Platform[]>(DEFAULT_PLATFORMS);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(DEFAULT_PLATFORMS);
 
   const [topic, setTopic] = useState("");
   const toneDetermined = useRef(false);
@@ -99,7 +100,8 @@ function DashboardContent() {
       .then((data: BrandSettingsData) => {
         if (cancelled) return;
         setDefaultTone(data.defaultTone ?? DEFAULT_TONE);
-        setDefaultPlatforms(data.defaultPlatforms ?? DEFAULT_PLATFORMS);
+        const platforms = data.defaultPlatforms ?? DEFAULT_PLATFORMS;
+        setSelectedPlatforms(platforms);
       })
       .catch(() => {
         if (cancelled) return;
@@ -122,13 +124,13 @@ function DashboardContent() {
     setInsufficientCredits(null);
     setCurrentGenerationId(null);
     setIntendedPublishAt(undefined);
-    setLoadingPlatforms(new Set(defaultPlatforms));
+    setLoadingPlatforms(new Set(selectedPlatforms));
 
     try {
       const response = await fetch(`/api/${slug}/generations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, tone }),
+        body: JSON.stringify({ topic, tone, platforms: selectedPlatforms }),
       });
 
       if (!response.ok) {
@@ -218,6 +220,14 @@ function DashboardContent() {
     }
   }
 
+  function togglePlatform(platform: Platform) {
+    setSelectedPlatforms((prev) =>
+      prev.includes(platform)
+        ? prev.filter((p) => p !== platform)
+        : [...prev, platform]
+    );
+  }
+
   const hasResults = Object.keys(platformToOutputId).length > 0;
   const showResultsArea = isGenerating || hasResults;
 
@@ -294,6 +304,25 @@ function DashboardContent() {
                     </Select>
                   </div>
 
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-zinc-800">
+                      Platforms
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {PLATFORM_OPTIONS.map((opt) => (
+                        <Toggle
+                          key={opt.value}
+                          variant="outline"
+                          pressed={selectedPlatforms.includes(opt.value)}
+                          onPressedChange={() => togglePlatform(opt.value)}
+                          aria-label={opt.label}
+                        >
+                          {opt.label}
+                        </Toggle>
+                      ))}
+                    </div>
+                  </div>
+
                   {error && (
                     <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                       {error}
@@ -312,12 +341,12 @@ function DashboardContent() {
                   <div className="flex flex-wrap items-center gap-4">
                     <Button
                       type="submit"
-                      disabled={isGenerating || !topic.trim()}
+                      disabled={isGenerating || !topic.trim() || selectedPlatforms.length === 0}
                     >
                       {isGenerating ? "Generating…" : "Generate"}
                     </Button>
                     <span className="text-sm text-zinc-500">
-                      This will cost {defaultPlatforms.length} credit{defaultPlatforms.length !== 1 ? "s" : ""}
+                      This will cost {selectedPlatforms.length} credit{selectedPlatforms.length !== 1 ? "s" : ""}
                     </span>
                   </div>
                 </form>
@@ -350,7 +379,7 @@ function DashboardContent() {
                 </div>
 
                 <div className="grid gap-5 sm:grid-cols-2">
-                  {defaultPlatforms.map((platform) => {
+                  {selectedPlatforms.map((platform) => {
                     const oid = platformToOutputId[platform];
                     const output = oid ? outputStates[oid] : undefined;
                     const isLoading = loadingPlatforms.has(platform) || (output ? output.isRegenerating : false);

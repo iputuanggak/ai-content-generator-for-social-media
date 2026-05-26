@@ -18,6 +18,21 @@ export type Platform =
 
 export type Tone = "professional" | "casual" | "humorous" | "inspirational";
 
+export const VALID_PLATFORMS: Platform[] = [
+  "twitter",
+  "linkedin",
+  "instagram",
+  "facebook",
+  "tiktok",
+  "youtube",
+  "threads",
+  "pinterest",
+];
+
+export function isValidPlatform(value: string): value is Platform {
+  return (VALID_PLATFORMS as string[]).includes(value);
+}
+
 export const PLATFORM_LABELS: Record<Platform, string> = {
   twitter: "Twitter / X",
   linkedin: "LinkedIn",

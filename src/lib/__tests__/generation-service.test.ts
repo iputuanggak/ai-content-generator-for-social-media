@@ -102,6 +102,32 @@ describe("Generation Service – generateContent", () => {
     ).rejects.toThrow("Brand settings not found");
   });
 
+  it("uses provided platforms instead of brand settings defaults", async () => {
+    const dbClient = makeDbClient([defaultBrandSettings]);
+    const deps: GenerationServiceDeps = {
+      dbClient,
+      openRouterFetch: makeFetch("Generated post"),
+    };
+
+    const result = await generateContent(
+      {
+        organizationId: "org-1",
+        memberId: "member-1",
+        topic: "AI news",
+        tone: "professional",
+        platforms: ["instagram", "tiktok", "threads"],
+      },
+      deps
+    );
+
+    expect(result.platformOutputs).toHaveLength(3);
+    expect(result.platformOutputs.map((o) => o.platform).sort()).toEqual([
+      "instagram",
+      "threads",
+      "tiktok",
+    ]);
+  });
+
   it("calls onPlatformOutput for each platform as it completes", async () => {
     const dbClient = makeDbClient([defaultBrandSettings]);
     const notified: string[] = [];

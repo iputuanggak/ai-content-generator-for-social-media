@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { db } from "@/lib/db";
 import { eq, and, ilike, gte, lte, desc } from "drizzle-orm";
-import { generation, brandSettings } from "@/lib/db/schema";
+import { generation } from "@/lib/db/schema";
 import { withSlugSession } from "@/lib/with-session";
-import type { Tone } from "@/lib/content-adapter";
-import { TONE_OPTIONS } from "@/lib/content-adapter";
+import type { Tone, Platform } from "@/lib/content-adapter";
+import { TONE_OPTIONS, isValidPlatform } from "@/lib/content-adapter";
 import { generateContent } from "@/lib/generation-service";
 import { initSSE, sendSSEEvent, closeSSE } from "@/lib/sse";
 import { MAX_TOPIC_LENGTH, validateLength } from "@/lib/input-validation";
@@ -73,7 +73,11 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await withSlugSession(req, res);
   if (!ctx) return;
 
-  const { topic, tone } = req.body as { topic?: string; tone?: Tone };
+  const { topic, tone, platforms: rawPlatforms } = req.body as {
+    topic?: string;
+    tone?: Tone;
+    platforms?: unknown;
+  };
 
   if (!topic || typeof topic !== "string" || topic.trim() === "") {
     return res.status(400).json({ error: "topic is required" });
@@ -84,18 +88,15 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: "tone must be a valid value" });
   }
 
-  const settingsRows = await db
-    .select()
-    .from(brandSettings)
-    .where(eq(brandSettings.organizationId, ctx.orgId))
-    .limit(1);
-
-  if (settingsRows.length === 0) {
-    return res.status(500).json({ error: "Brand settings not found" });
+  if (!Array.isArray(rawPlatforms) || rawPlatforms.length === 0) {
+    return res.status(400).json({ error: "platforms must be a non-empty array" });
   }
-  const defaultPlatforms = settingsRows[0].defaultPlatforms as string[];
+  if (!rawPlatforms.every((p): p is string => typeof p === "string" && isValidPlatform(p))) {
+    return res.status(400).json({ error: "platforms contains invalid values" });
+  }
+  const platforms = rawPlatforms as Platform[];
 
-  const platformCount = defaultPlatforms.length;
+  const platformCount = platforms.length;
 
   initSSE(res);
 
@@ -113,6 +114,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
           memberId: ctx.memberId,
           topic: topic.trim(),
           tone,
+          platforms,
           onPlatformOutput: async ({ platform, content, platformOutputId, generationId }) => {
             capturedGenerationId = generationId;
             sendSSEEvent(res, { platform, content, generationId, platformOutputId });

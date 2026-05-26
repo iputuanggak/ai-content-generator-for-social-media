@@ -21,6 +21,7 @@ interface CreditCheckResult {
 async function handleCreateGeneration({
   topic,
   tone,
+  platforms,
   session,
   findBrandSettings,
   checkCredits,
@@ -29,6 +30,7 @@ async function handleCreateGeneration({
 }: {
   topic: string | undefined;
   tone: string | undefined;
+  platforms: unknown;
   session: MockSession | null;
   findBrandSettings: (orgId: string) => Promise<MockBrandSettings | null>;
   checkCredits: (orgId: string, amount: number) => Promise<CreditCheckResult>;
@@ -50,10 +52,15 @@ async function handleCreateGeneration({
   }
   if (!tone) return { status: 400, body: { error: "tone must be a valid value" } };
 
-  const settings = await findBrandSettings(activeOrgId);
-  if (!settings) return { status: 500, body: { error: "Brand settings not found" } };
+  if (!Array.isArray(platforms) || platforms.length === 0) {
+    return { status: 400, body: { error: "platforms must be a non-empty array" } };
+  }
+  const VALID_PLATFORMS = ["twitter", "linkedin", "instagram", "facebook", "tiktok", "youtube", "threads", "pinterest"];
+  if (!platforms.every((p: string) => typeof p === "string" && VALID_PLATFORMS.includes(p))) {
+    return { status: 400, body: { error: "platforms contains invalid values" } };
+  }
 
-  const platformCount = settings.defaultPlatforms.length;
+  const platformCount = platforms.length;
 
   const creditCheck = await checkCredits(activeOrgId, platformCount);
   if (!creditCheck.sufficient) {
@@ -91,6 +98,7 @@ describe("POST /api/generations credit integration", () => {
     const result = await handleCreateGeneration({
       topic: "AI trends",
       tone: "professional",
+      platforms: ["twitter", "linkedin", "instagram"],
       session: authedSession,
       findBrandSettings: async () => ({ defaultPlatforms: ["twitter", "linkedin", "instagram"] }),
       checkCredits: async () => ({ sufficient: false, available: 1, required: 3 }),
@@ -105,12 +113,13 @@ describe("POST /api/generations credit integration", () => {
     expect(body.available).toBe(1);
   });
 
-  it("checks credits for the number of active platforms", async () => {
+  it("checks credits for the number of selected platforms", async () => {
     const checkCalls: { orgId: string; amount: number }[] = [];
 
     await handleCreateGeneration({
       topic: "AI trends",
       tone: "professional",
+      platforms: ["twitter", "linkedin"],
       session: authedSession,
       findBrandSettings: async () => ({ defaultPlatforms: ["twitter", "linkedin"] }),
       checkCredits: async (orgId, amount) => {
@@ -131,6 +140,7 @@ describe("POST /api/generations credit integration", () => {
     await handleCreateGeneration({
       topic: "AI trends",
       tone: "professional",
+      platforms: ["twitter", "linkedin"],
       session: authedSession,
       findBrandSettings: async () => ({ defaultPlatforms: ["twitter", "linkedin"] }),
       checkCredits: async () => ({ sufficient: true, available: 25, required: 2 }),
@@ -153,6 +163,7 @@ describe("POST /api/generations credit integration", () => {
     await handleCreateGeneration({
       topic: "AI trends",
       tone: "professional",
+      platforms: ["twitter", "linkedin", "instagram"],
       session: authedSession,
       findBrandSettings: async () => ({ defaultPlatforms: ["twitter", "linkedin", "instagram"] }),
       checkCredits: async () => ({ sufficient: true, available: 25, required: 3 }),
@@ -176,6 +187,7 @@ describe("POST /api/generations credit integration", () => {
     await handleCreateGeneration({
       topic: "AI trends",
       tone: "professional",
+      platforms: ["twitter"],
       session: authedSession,
       findBrandSettings: async () => ({ defaultPlatforms: ["twitter"] }),
       checkCredits: async () => ({ sufficient: false, available: 0, required: 1 }),
@@ -192,6 +204,7 @@ describe("POST /api/generations credit integration", () => {
     const result = await handleCreateGeneration({
       topic: undefined,
       tone: "professional",
+      platforms: ["twitter"],
       session: authedSession,
       findBrandSettings: async () => ({ defaultPlatforms: ["twitter"] }),
       checkCredits: async () => ({ sufficient: true, available: 25, required: 1 }),
@@ -200,5 +213,73 @@ describe("POST /api/generations credit integration", () => {
     });
 
     expect(result.status).toBe(400);
+  });
+
+  it("returns 400 when platforms field is missing", async () => {
+    const result = await handleCreateGeneration({
+      topic: "AI trends",
+      tone: "professional",
+      platforms: undefined,
+      session: authedSession,
+      findBrandSettings: async () => ({ defaultPlatforms: ["twitter"] }),
+      checkCredits: async () => ({ sufficient: true, available: 25, required: 1 }),
+      generateContent: async () => {},
+      deductCredits: async () => {},
+    });
+
+    expect(result.status).toBe(400);
+    const body = result.body as { error: string };
+    expect(body.error).toContain("non-empty array");
+  });
+
+  it("returns 400 when platforms is an empty array", async () => {
+    const result = await handleCreateGeneration({
+      topic: "AI trends",
+      tone: "professional",
+      platforms: [],
+      session: authedSession,
+      findBrandSettings: async () => ({ defaultPlatforms: ["twitter"] }),
+      checkCredits: async () => ({ sufficient: true, available: 25, required: 1 }),
+      generateContent: async () => {},
+      deductCredits: async () => {},
+    });
+
+    expect(result.status).toBe(400);
+    const body = result.body as { error: string };
+    expect(body.error).toContain("non-empty array");
+  });
+
+  it("returns 400 when platforms contains invalid platform string", async () => {
+    const result = await handleCreateGeneration({
+      topic: "AI trends",
+      tone: "professional",
+      platforms: ["twitter", "myspace"],
+      session: authedSession,
+      findBrandSettings: async () => ({ defaultPlatforms: ["twitter"] }),
+      checkCredits: async () => ({ sufficient: true, available: 25, required: 2 }),
+      generateContent: async () => {},
+      deductCredits: async () => {},
+    });
+
+    expect(result.status).toBe(400);
+    const body = result.body as { error: string };
+    expect(body.error).toContain("invalid values");
+  });
+
+  it("returns 400 when platforms is not an array", async () => {
+    const result = await handleCreateGeneration({
+      topic: "AI trends",
+      tone: "professional",
+      platforms: "twitter",
+      session: authedSession,
+      findBrandSettings: async () => ({ defaultPlatforms: ["twitter"] }),
+      checkCredits: async () => ({ sufficient: true, available: 25, required: 1 }),
+      generateContent: async () => {},
+      deductCredits: async () => {},
+    });
+
+    expect(result.status).toBe(400);
+    const body = result.body as { error: string };
+    expect(body.error).toContain("non-empty array");
   });
 });

@@ -10,6 +10,7 @@ export interface GenerateContentInput {
   memberId: string;
   topic: string;
   tone: Tone;
+  platforms?: Platform[];
   intendedPublishAt?: Date;
   /**
    * Called as each platform output is persisted to the database.
@@ -60,7 +61,7 @@ export async function generateContent(
   }
 
   const brandSetting = settings[0];
-  const defaultPlatforms = brandSetting.defaultPlatforms as Platform[];
+  const platforms = input.platforms ?? (brandSetting.defaultPlatforms as Platform[]);
   const modelId = brandSetting.modelId;
   const brandVoice = brandSetting.brandVoice;
 
@@ -80,7 +81,7 @@ export async function generateContent(
   const platformOutputResults: PlatformOutputResult[] = [];
 
   await Promise.all(
-    defaultPlatforms.map(async (platform) => {
+    platforms.map(async (platform) => {
       const { systemPrompt, userPrompt } = buildPrompts(
         input.topic,
         input.tone,
