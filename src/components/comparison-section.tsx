@@ -245,7 +245,7 @@ export function ComparisonSection() {
               <img
                 alt="Lotus dashboard — all platforms"
                 className="rounded-xl w-full aspect-[16/9]"
-                src={"/images/prompt and outputs.avif"}
+                src={"/images/Lotus Generate Snapshot.avif"}
               />
 
               <div className="mt-4 flex items-center gap-3">

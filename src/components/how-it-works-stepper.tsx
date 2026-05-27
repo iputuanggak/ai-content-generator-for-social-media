@@ -11,7 +11,7 @@ const steps = [
       "Describe your topic and choose a tone. One input is all it takes.",
     accent: "var(--primary)",
     accentSoft: "var(--secondary)",
-    image: "/images/Write Prompt.avif",
+    image: "/images/Lotus Prompt Snapshot.avif",
     alt: "Product screenshot — prompt input",
   },
   {
@@ -21,7 +21,7 @@ const steps = [
       "Your message is reshaped for every platform's tone, length, and format conventions.",
     accent: "var(--coral)",
     accentSoft: "var(--coral-soft)",
-    image: "/images/platforms output.avif",
+    image: "/images/Lotus Outputs Snapshot.avif",
     alt: "Product screenshot — AI generation",
   },
   {
@@ -31,7 +31,7 @@ const steps = [
       "Review each output, make edits, and record your intended publish date.",
     accent: "var(--amber)",
     accentSoft: "var(--amber-soft)",
-    image: "/images/Set Calendar.avif",
+    image: "/images/Lotus Publish Date Snapshot.avif",
     alt: "Product screenshot — output review",
   },
 ];

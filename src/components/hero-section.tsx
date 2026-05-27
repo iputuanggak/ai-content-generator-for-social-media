@@ -415,15 +415,16 @@ export function HeroSection() {
                   className="flex-1 text-center text-xs font-medium"
                   style={{ color: "var(--muted-foreground)" }}
                 >
-                  dashboard
+                  lotus
                 </div>
                 <div className="w-16" />
               </div>
               <img
-                src={"images/ai content generator dashboard.avif"}
+                src={"images/Lotus Hero Snapshot.avif"}
                 className="w-full aspect-[16/9] min-h-[300px] sm:min-h-[400px] lg:min-h-[520px]"
                 width={1100}
                 height={620}
+                alt="Lotus Hero Snapshot"
               />
             </div>
 

@@ -141,7 +141,7 @@ function BrowserFrame({ children }: { children: React.ReactNode }) {
         </div>
         <div className="flex-1 flex justify-center">
           <div className="px-4 py-1 rounded-md bg-muted/60 text-xs text-muted-foreground/60 max-w-xs w-full text-center">
-            dashboard
+            lotus
           </div>
         </div>
         <div className="w-9" />
@@ -255,7 +255,7 @@ export function FeatureShowcase() {
           <motion.div variants={imageItemVariants}>
             <BrowserFrame>
               <img
-                src={"/images/prompt and outputs.avif"}
+                src={"/images/Lotus Generate Snapshot.avif"}
                 alt="Product screenshot — AI content generation dashboard"
                 className="w-full aspect-16/10"
               />

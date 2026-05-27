@@ -14,7 +14,7 @@ const cards = [
     label: "Product screenshot — multi-platform dashboard",
     span: "md:col-span-7",
     imageHeight: 280,
-    image: "images/Multi-Platform Generation.avif",
+    image: "images/Lotus Outputs Snapshot.avif",
   },
   {
     title: "Brand Settings",
@@ -25,7 +25,7 @@ const cards = [
     label: "Product screenshot — brand settings",
     span: "md:col-span-5",
     imageHeight: 220,
-    image: "images/Brand Settings.avif",
+    image: "images/Lotus Brand Settings Snapshot.avif",
   },
   {
     title: "Team Collaboration",
@@ -36,7 +36,7 @@ const cards = [
     label: "Product screenshot — team workspace",
     span: "md:col-span-5",
     imageHeight: 220,
-    image: "images/Team Collaboration.avif",
+    image: "images/Lotus Team Members Snapshot.avif",
   },
   {
     title: "Generation History",
@@ -47,7 +47,7 @@ const cards = [
     label: "Product screenshot — generation history",
     span: "md:col-span-7",
     imageHeight: 220,
-    image: "images/Generation History.avif",
+    image: "images/Lotus History Snapshot.avif",
   },
 ];
 
