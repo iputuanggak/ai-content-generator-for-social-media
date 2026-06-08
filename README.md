@@ -14,7 +14,7 @@ A fullstack SaaS application that generates platform-adapted social media conten
 
 ### Content Generation
 
-![Lotus Content Generation](/public/images/lotus%20Generate%20Snapshot.avif)
+![Lotus Content Generation](/public/images/Lotus%20Generate%20Snapshot.avif)
 
 - **Multi-platform generation** — produces posts for Twitter/X, LinkedIn, Instagram, Facebook, TikTok, YouTube, Threads, and Pinterest from a single topic
 - **Real-time streaming** — results stream back via Server-Sent Events as each platform completes, not all-at-once
@@ -24,7 +24,7 @@ A fullstack SaaS application that generates platform-adapted social media conten
 
 ### Team Collaboration
 
-![Lotus Team Member](/public/images/lotus%20Team%20Members%20Snapshot.avif)
+![Lotus Team Member](/public/images/Lotus%20Team%20Members%20Snapshot.avif)
 
 - **Organization-based teams** — create a team, invite members via email, manage roles (Owner, Admin, Member)
 - **Shared brand settings** — team-level brand voice, default tone, active platforms, and AI model selection
@@ -32,7 +32,7 @@ A fullstack SaaS application that generates platform-adapted social media conten
 
 ### Authentication & Security
 
-![Lotus Auth OTP](/public/images/lotus%20auth%20Otp%20snapshot.avif)
+![Lotus Auth OTP](/public/images/Lotus%20Auth%20OTP%20Snapshot.avif)
 
 - **Email verification** via 6-digit OTP with rate limiting, cooldown, and expiry
 - **Disposable email blocking** — prevents spam registrations with a domain blocklist
@@ -40,7 +40,7 @@ A fullstack SaaS application that generates platform-adapted social media conten
 
 ### Blog (Strapi CMS)
 
-![Lotus Blog](/public/images/lotus%20blog%20snapshot.avif)
+![Lotus Blog](/public/images/Lotus%20Blog%20Snapshot.avif)
 
 - **Headless CMS** — blog powered by Strapi v5 with Articles and Categories content types
 - **ISR with 60s revalidation** — statically generated listing and detail pages, revalidated incrementally
@@ -51,7 +51,7 @@ A fullstack SaaS application that generates platform-adapted social media conten
 
 ### AI Credit System
 
-![Lotus AI Credits System](/public/images/lotus%20ai%20credits%20snapshot.avif)
+![Lotus AI Credits System](/public/images/Lotus%20AI%20Credits%20Snapshot.avif)
 
 - **Pay-per-use credits** — 1 credit = 1 platform output (generating across 5 platforms costs 5 credits)
 - **25 free starter credits** — automatically granted when a team is created
@@ -63,7 +63,7 @@ A fullstack SaaS application that generates platform-adapted social media conten
 
 ### Billing & Payments (Stripe)
 
-![Lotus Auth OTP](/public/images/lotus%20stripe%20snapshot.avif)
+![Lotus Stripe](/public/images/Lotus%20Stripe%20Snapshot.avif)
 
 - **One-time payments** via Stripe Checkout (not subscriptions) — users buy credit packages as needed
 - **Stripe Checkout Sessions** — server-side session creation with team metadata for reconciliation
