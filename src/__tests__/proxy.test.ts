@@ -15,6 +15,7 @@ const EXCLUDED_PREFIXES = [
   "/_next",
   "/login",
   "/register",
+  "/forgot-password",
   "/onboarding",
   "/accept-invitation",
   "/teams",
@@ -166,6 +167,7 @@ describe("proxy auth gate", () => {
       "/_next/static/chunk.js",
       "/login",
       "/register",
+      "/forgot-password",
       "/onboarding",
       "/accept-invitation",
       "/teams",
@@ -330,6 +332,30 @@ describe("proxy auth gate", () => {
         "x-org-slug": "acme-marketing",
         "x-org-role": "member",
       });
+    });
+  });
+
+  describe("forgot-password page — allowlisted for all users", () => {
+    it("passes through /forgot-password without session cookie", async () => {
+      const result = await proxyLogic({
+        pathname: "/forgot-password",
+        cookies: [],
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
+        getSession: async () => null,
+      });
+      expect(result.action).toBe("next");
+    });
+
+    it("does NOT redirect authenticated users away from /forgot-password", async () => {
+      const result = await proxyLogic({
+        pathname: "/forgot-password",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
+      });
+      expect(result.action).toBe("next");
     });
   });
 

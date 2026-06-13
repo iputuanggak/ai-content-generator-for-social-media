@@ -82,5 +82,22 @@ export const auth = betterAuth({
   ],
   emailAndPassword: {
     enabled: true,
+    revokeSessionsOnPasswordReset: true,
+    async sendResetPassword({ user, url }) {
+      const { Resend } = await import("resend");
+      const { ResetPasswordEmail } = await import("@/emails/reset-password-email");
+      const resend = new Resend(process.env.RESEND_API_KEY);
+
+      const { error } = await resend.emails.send({
+        from: process.env.EMAIL_FROM ?? "Lotus <noreply@lotus.app>",
+        to: user.email,
+        subject: "Reset your Lotus password",
+        react: ResetPasswordEmail({ resetLink: url }),
+      });
+
+      if (error) {
+        throw new Error(`Failed to send reset password email: ${error.message}`);
+      }
+    },
   },
 });

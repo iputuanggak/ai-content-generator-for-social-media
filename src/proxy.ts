@@ -16,6 +16,7 @@ const EXCLUDED_PREFIXES = [
   "/_next",
   "/login",
   "/register",
+  "/forgot-password",
   "/onboarding",
   "/accept-invitation",
   "/teams",
