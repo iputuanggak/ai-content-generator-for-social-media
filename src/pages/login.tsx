@@ -17,6 +17,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const resetSuccess = router.query.reset === "success";
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -98,6 +100,12 @@ export default function LoginPage() {
             Create one
           </Link>
         </p>
+
+        {resetSuccess && (
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+            Your password has been reset. Please sign in with your new password.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <FormField

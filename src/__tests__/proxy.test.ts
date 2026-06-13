@@ -16,6 +16,7 @@ const EXCLUDED_PREFIXES = [
   "/login",
   "/register",
   "/forgot-password",
+  "/reset-password",
   "/onboarding",
   "/accept-invitation",
   "/teams",
@@ -168,6 +169,7 @@ describe("proxy auth gate", () => {
       "/login",
       "/register",
       "/forgot-password",
+      "/reset-password",
       "/onboarding",
       "/accept-invitation",
       "/teams",
@@ -354,6 +356,41 @@ describe("proxy auth gate", () => {
         resolveSlug: async () => resolvedOrg,
         listOrganizations: defaultListOrganizations,
         getSession: async () => ({ user: { emailVerified: true } }),
+      });
+      expect(result.action).toBe("next");
+    });
+  });
+
+  describe("reset-password page — allowlisted for all users", () => {
+    it("passes through /reset-password without session cookie", async () => {
+      const result = await proxyLogic({
+        pathname: "/reset-password",
+        cookies: [],
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
+        getSession: async () => null,
+      });
+      expect(result.action).toBe("next");
+    });
+
+    it("does NOT redirect authenticated users away from /reset-password", async () => {
+      const result = await proxyLogic({
+        pathname: "/reset-password",
+        cookies: validCookies,
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
+        getSession: async () => ({ user: { emailVerified: true } }),
+      });
+      expect(result.action).toBe("next");
+    });
+
+    it("passes through /reset-password with token query param", async () => {
+      const result = await proxyLogic({
+        pathname: "/reset-password",
+        cookies: [],
+        resolveSlug: async () => resolvedOrg,
+        listOrganizations: defaultListOrganizations,
+        getSession: async () => null,
       });
       expect(result.action).toBe("next");
     });
