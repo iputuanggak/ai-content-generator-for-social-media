@@ -27,7 +27,7 @@ Autonomous loop that implements GitHub Issues in dependency order, one issue at 
 
 - **Sequential.** One issue at a time. Never start the next until current is closed.
 - **Supervisor owns git.** Sub-agents write code only — never run git themselves.
-- **Halt on stuck.** If sub-agent returns `status: stuck` or unparseable response → discard partial work (`git checkout .` + `git clean -fd`), halt and report issue number, title, blocker, and resume instructions.
+- **Halt on stuck.** If sub-agent returns `status: stuck` or unparseable response → preserve partial work in the working tree, halt and report issue number, title, blocker, and resume instructions. Include a `git diff --stat` summary of what was changed.
 - **Validate commit fields.** Never use unvalidated `commitType`/`commitScope` from sub-agent directly.
 - **Stop on ambiguity.** If issue contradicts `CONTEXT.md` or an ADR → relabel `needs-info`, comment reason, halt.
 - **Skip parent issues.** Issues labelled `prd` or `epic` are read-only context (passed to sub-agents but never implemented).

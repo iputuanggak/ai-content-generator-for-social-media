@@ -19,7 +19,8 @@ Fails → halt: `Ralph halted: local branch is behind remote. Resolve and re-run
 ```bash
 git status --porcelain
 ```
-If any output → halt: `Ralph halted: working tree is dirty.`
+If any output and this is the first iteration → halt: `Ralph halted: working tree is dirty.`
+If any output and this is a subsequent iteration (resuming after a stuck halt) → warn: `Working tree has partial changes from previous stuck issue. Resolve the working tree before proceeding.` then halt.
 
 ```bash
 gh issue list --repo <repo> --label ready-for-agent --state open --json number,title,body,labels
@@ -72,15 +73,18 @@ The sub-agent may wrap JSON in markdown fences or add surrounding text. Parse ro
 
 If parsing fails completely → treat as `status: stuck`.
 
-If `status == "stuck"`:
+If `status == "stuck"` → preserve partial work in the working tree. Gather a diff summary:
 ```bash
-git checkout .
-git clean -fd
+git diff --stat
+git diff --stat --cached
 ```
 Then halt:
 ```
 Ralph loop halted on issue #<N>: "<title>"
 Blocker: <blockers field>
+
+Partial changes left in working tree:
+<diff --stat output>
 
 To resume: fix the issue description or remove the `ready-for-agent` label, then re-run ralph.
 ```
@@ -90,7 +94,7 @@ To resume: fix the issue description or remove the `ready-for-agent` label, then
 npm run typecheck
 ```
 On failure: spawn one fix sub-agent (prompt from EXAMPLES.md "Typecheck fix variant", passing the typecheck output).
-Still fails → `git checkout .` + `git clean -fd`, then halt noting typecheck failure.
+Still fails → preserve partial work in the working tree, then halt noting typecheck failure.
 
 **4-c. Tests:**
 ```bash
@@ -101,7 +105,7 @@ Exists:
 ```bash
 npm test
 ```
-Same single-retry + halt-on-failure policy.
+Same single-retry policy. Still fails → preserve partial work in the working tree, then halt noting test failure.
 
 ---
 
