@@ -88,11 +88,14 @@ describe("RegisterPage buttons", () => {
     expect(submitBtn).toHaveAttribute("data-variant", "default");
   });
 
-  it("uses shadcn Button for password toggle with ghost variant", () => {
+  it("uses shadcn Button for password toggles with ghost variant", () => {
     render(wrap(<RegisterPage />));
-    const toggleBtn = screen.getByLabelText("Show password");
-    expect(toggleBtn).toHaveAttribute("data-slot", "button");
-    expect(toggleBtn).toHaveAttribute("data-variant", "ghost");
+    const toggleBtns = screen.getAllByLabelText("Show password");
+    expect(toggleBtns).toHaveLength(2);
+    toggleBtns.forEach((btn) => {
+      expect(btn).toHaveAttribute("data-slot", "button");
+      expect(btn).toHaveAttribute("data-variant", "ghost");
+    });
   });
 });
 

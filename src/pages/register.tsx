@@ -15,13 +15,22 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmError, setConfirmError] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setConfirmError("");
+
+    if (password !== confirmPassword) {
+      setConfirmError("Passwords do not match.");
+      return;
+    }
 
     if (isDisposableEmail(email)) {
       setError("This email provider is not supported. Please use a permanent email address.");
@@ -126,6 +135,32 @@ export default function RegisterPage() {
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={16} />
+            </Button>
+          </FormField>
+
+          <FormField
+            label="Confirm Password"
+            id="confirmPassword"
+            type={showConfirmPassword ? "text" : "password"}
+            value={confirmPassword}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              setConfirmError("");
+            }}
+            error={confirmError}
+            required
+            autoComplete="new-password"
+            placeholder="Repeat your password"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-2 top-1/2 -mt-3"
+              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+            >
+              <HugeiconsIcon icon={showConfirmPassword ? ViewOffIcon : ViewIcon} size={16} />
             </Button>
           </FormField>
 
